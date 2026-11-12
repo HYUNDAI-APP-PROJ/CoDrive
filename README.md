@@ -9,11 +9,11 @@
 | 조직 | HYUNDAI-APP-PROJ |
 | 플랫폼 | Pleos Connect / Android |
 | 개발 도구 | Android Studio |
-| 현재 상태 | 도메인별 패키지 구성 완료, 프론트 목업 구현 전 |
+| 현재 상태 | AI 경로 추천 네이티브 목업 구현 |
 
 여러 차량이 함께 여행할 때 그룹 관리, 대열 확인, 음성 대화, 공동 의사결정, AI 추천과 여행 기록을 제공하는 앱을 목표로 합니다.
 
-현재는 `:app` 단일 모듈에 Java 패키지 구조와 역할 설명만 추가한 상태입니다. 아래 기능은 구현할 요구사항이며, 실행할 화면과 서버·차량 SDK 연동은 아직 없습니다.
+현재는 `:app` 단일 모듈에서 Java 기반 Android View로 AI 경로 추천 화면과 모의 그룹 생성 화면을 실행할 수 있습니다. 서버·AI·차량 SDK·실제 내비게이션은 연결하지 않았습니다. 아래 기능별 요구사항은 전체 개발 범위이며, 구현된 목업 범위와 구분합니다.
 
 ## 개발 시작하기
 
@@ -23,7 +23,64 @@ cd pleos-app
 git switch develop
 ```
 
-Android Studio에서 프로젝트 루트를 열고 Gradle을 동기화합니다. 필요한 JDK, Android SDK 및 Gradle 버전은 프로젝트 설정을 기준으로 사용합니다. 현재 실행할 Activity는 없으며, 시작 화면을 구현할 때 Manifest에 등록합니다.
+Android Studio에서 프로젝트 루트를 열고 Gradle을 동기화합니다. 필요한 JDK, Android SDK 및 Gradle 버전은 프로젝트 설정을 기준으로 사용합니다. 실행 구성에서 `app`을 선택해 Pleos 에뮬레이터나 Android 기기에서 실행하면 `com.codrive.app.MainActivity`가 열립니다.
+
+## 현재 실행 가능한 목업
+
+디자인 기준은 [브라우저 초안](docs/design/route-recommendation.html)입니다. 이를 WebView로 띄우지 않고 Java 기반 Android View로 옮겼습니다. 새로운 라이브러리는 추가하지 않았습니다.
+
+[Pleos 에뮬레이터 실행 화면](docs/design/native-recommendation.png)
+
+- 다크 네이비·민트 테마, 왼쪽 메뉴와 개인/그룹 추천 탭.
+- 단순한 프롬프트 입력창, 하단 중앙 마이크, 전송 버튼 왼쪽의 자동 경로 토글.
+- 추천 예시 버튼은 입력만 채우고, 전송은 사용자가 결정합니다.
+- 프롬프트 전송 시 입력창을 비우고 요청과 고정 추천 예시를 기록에 남깁니다. 개인 기록과 그룹별 기록은 분리합니다.
+- 기본 그룹은 **강릉 주말 여행 · 차량 3대**입니다. 그룹이 없으면 그룹 생성 화면으로 이동하고, 이름 입력 후 모의 차량 3대의 그룹을 생성합니다.
+- 기기에 Android 음성 인식 서비스가 있으면 마이크 권한을 받아 한국어 STT를 실행합니다. 말을 마친 뒤 최종 인식 결과가 오면 자동 전송합니다. 다시 누르면 취소하며, 취소·오류 시 기존 입력을 보존합니다. 도중에 텍스트를 수정하거나 탭을 바꾸면 음성 입력을 취소합니다.
+- 음성 인식 서비스가 없는 기기에서는 안내를 표시하고 텍스트 입력을 제공합니다. 음성 인식은 기기 서비스에 따라 인터넷 연결이 필요할 수 있습니다.
+- 화면 재생성 시 입력·탭·토글·대화 기록·생성 중인 그룹 이름을 복원합니다. 각 대화는 최근 30건을 유지합니다. 영구 저장이나 다른 차량과의 동기화는 제공하지 않습니다.
+
+**목업 범위:** AI 응답은 요청 내용과 무관한 고정 예시입니다. 위치·차량·정차 상태는 예시이며, 자동 경로 토글은 상태와 안내 문구만 바꿉니다. 그룹 승인, 실제 경로 적용, 실시간 음성 채널과 나머지 메뉴는 후속 구현 대상입니다.
+
+### 그룹이 없는 시나리오 확인
+
+앱을 설치한 뒤 터미널에서 실행합니다. `adb`가 PATH에 없으면 Android SDK의 `platform-tools/adb` 전체 경로를 사용합니다.
+
+```bash
+adb shell am force-stop com.codrive
+adb shell am start -n com.codrive/.app.MainActivity --ez mock_group false
+```
+
+`그룹 추천`을 누르면 그룹 생성 화면이 열립니다. 이름을 입력하고 `그룹 만들고 추천받기`를 누르면 이름·차량 3대가 헤더에 표시됩니다. `mock_group` 옵션은 디버그 빌드에서만 적용합니다. 기본 상태로 돌아오려면 종료 후 아래처럼 실행합니다.
+
+```bash
+adb shell am force-stop com.codrive
+adb shell am start -n com.codrive/.app.MainActivity --ez mock_group true
+```
+
+### 지금 추가된 코드의 역할
+
+| 파일 | 책임 |
+| --- | --- |
+| `app/MainActivity.java` | 시작 화면, 탭 전환, 그룹 화면 연결, 권한 요청, 상태 복원 |
+| `recommendation/ui/RecommendationScreen.java` | 입력·추천 기록·토글 등 네이티브 화면 표시 |
+| `recommendation/ui/RecommendationViewModel.java` | 화면 재생성 중 상태 보관. View나 Activity는 보관하지 않음 |
+| `recommendation/ui/RecommendationState.java` | 입력, 개인/그룹 기록, 자동 경로 설정 상태 |
+| `group/ui/lobby/GroupCreateScreen.java` | 그룹 이름 입력과 생성 화면 |
+| `group/data/model/TravelGroup.java` | 그룹 ID·이름·차량 수 데이터 |
+| `group/data/repository/MockGroupRepository.java` | 기본 그룹과 새 모의 그룹 생성 |
+| `core/ui/Ui.java`, `MicButton.java` | 공통 뷰 스타일, 터치 영역, 마이크·파형 애니메이션 |
+| `core/speech/SpeechInputController.java` | Android STT 시작·취소·결과·오류 처리와 늦은 콜백 차단 |
+
+### 검증 명령
+
+```bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-configuration-cache
+# 실행 중인 에뮬레이터 또는 연결 기기 필요
+./gradlew :app:connectedDebugAndroidTest --no-configuration-cache
+```
+
+단위 검사는 대화 분리·입력 초기화·상태 직렬화·그룹 이름 검증을 확인합니다. 화면 검사는 개인 전송, 그룹 전환, 그룹 생성, 입력·기록 복원을 확인합니다. 실제 음성 인식 품질과 자동 종료 시점은 음성 인식 서비스가 설치된 기기에서 직접 확인해야 합니다.
 
 ## 패키지 구조 이해하기
 
@@ -89,7 +146,7 @@ com.codrive/
 
 ### 모든 도메인에 적용할 내부 규칙
 
-모든 도메인에 다음 공통 구조를 추가했습니다. 현재 각 패키지에는 역할을 설명하는 `package-info.java`만 있으며 구현 클래스는 없습니다. 목업 단계에서는 `ui`부터 사용하고, 데이터 연동과 업무 규칙은 필요할 때 해당 패키지에 구현합니다.
+모든 도메인에 다음 공통 구조를 추가했습니다. 각 패키지의 역할은 `package-info.java`에 설명합니다. 현재 `app`, `recommendation/ui`, `group/ui/lobby`, `group/data`, `core/ui`, `core/speech`에 목업 실행에 필요한 클래스가 있습니다. 나머지 레이어는 실제 데이터 연동과 업무 규칙이 필요할 때 구현합니다.
 
 ```text
 <도메인>/
@@ -124,7 +181,7 @@ com.codrive/
 
 ### 공통 기반 기능과 도메인의 경계
 
-`core`는 여러 도메인이 함께 사용하는 기술적 기능을 제공합니다. 각 도메인은 이 기능을 사용해 자기 업무를 처리합니다. 현재 `core`에도 역할 설명 파일만 추가했으며, 통신·위치·음성 SDK나 구현 클래스는 추가하지 않았습니다.
+`core`는 여러 도메인이 함께 사용하는 기술적 기능을 제공합니다. 각 도메인은 이 기능을 사용해 자기 업무를 처리합니다. 현재 `core/ui`에는 공통 뷰 생성과 마이크 애니메이션이 있고, `core/speech`에는 Android 음성 인식 연결이 있습니다. 네트워크·실제 위치 제공은 아직 구현하지 않았습니다.
 
 - `core/network`는 통신 설정을 공유합니다. 그룹 참여나 AI 추천 API 호출은 각 도메인의 `data/source`에 둡니다.
 - `core/location`은 위치 데이터를 제공합니다. 약 50m 내 주변 음성 참여 여부는 `voice`, 대열 표시는 `convoy`, 추천 위치 활용은 `recommendation`에서 담당합니다.
