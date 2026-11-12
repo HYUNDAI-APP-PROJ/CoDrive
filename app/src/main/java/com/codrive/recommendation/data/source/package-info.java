@@ -1,0 +1,7 @@
+/**
+ * AI 장소와 코스 추천 도메인의 외부 데이터 접근 관련 코드를 배치하는 패키지.
+ *
+ * <p>이 도메인에 필요한 서버, 로컬 저장소 또는 차량 SDK 연동을 담당한다. 화면과 ViewModel은 이 패키지에 직접 접근하지 않고 Repository를 사용한다.
+ * 현재는 패키지 구조만 정의되어 있으며 구현 클래스는 아직 없다.
+ */
+package com.codrive.recommendation.data.source;
