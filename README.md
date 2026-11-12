@@ -18,8 +18,7 @@
 ## 개발 시작하기
 
 ```bash
-git clone https://github.com/HYUNDAI-APP-PROJ/pleos-app.git
-cd pleos-app
+git clone https://github.com/HYUNDAI-APP-PROJ/CoDrive.git
 git switch develop
 ```
 
