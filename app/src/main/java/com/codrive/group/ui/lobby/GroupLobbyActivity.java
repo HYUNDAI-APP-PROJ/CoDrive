@@ -4,11 +4,15 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.AbstractSavedStateViewModelFactory;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
@@ -43,6 +47,17 @@ public final class GroupLobbyActivity extends GroupScreenActivity {
             public void afterTextChanged(Editable e) { }
         };
         for (EditText input : new EditText[]{name, code, alias, count}) input.addTextChangedListener(watcher);
+        name.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+            if (actionId != EditorInfo.IME_ACTION_DONE && !enter) return false;
+            if (event == null || event.getAction() == KeyEvent.ACTION_UP) {
+                capture();
+                findViewById(R.id.group_root).requestFocus();
+                WindowCompat.getInsetsController(getWindow(), view)
+                        .hide(WindowInsetsCompat.Type.ime());
+            }
+            return true;
+        });
         rule.setOnCheckedChangeListener((group, checked) -> capture());
         findViewById(R.id.passengers_minus).setOnClickListener(v -> changeCount(-1));
         findViewById(R.id.passengers_plus).setOnClickListener(v -> changeCount(1));

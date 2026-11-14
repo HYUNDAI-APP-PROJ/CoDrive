@@ -1,0 +1,14 @@
+<resources>
+    <!-- Half of the Connect-S-17 app area: approximately 840 x 1184dp. -->
+    <dimen name="group_header">72dp</dimen>
+    <dimen name="group_outer">16dp</dimen>
+    <dimen name="group_panel_padding">24dp</dimen>
+    <dimen name="group_hero_padding">24dp</dimen>
+    <dimen name="group_title">30sp</dimen>
+    <dimen name="group_body">18sp</dimen>
+    <dimen name="group_small">14sp</dimen>
+    <dimen name="group_control">56dp</dimen>
+    <dimen name="group_label_gap">16dp</dimen>
+    <dimen name="group_block_gap">20dp</dimen>
+    <dimen name="group_member_height">88dp</dimen>
+</resources>

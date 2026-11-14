@@ -6,65 +6,59 @@
         <TextView android:id="@+id/header_context" style="@style/Group.Text" android:text="@string/group_waiting_title" android:layout_width="wrap_content" android:textColor="@color/group_muted" android:textSize="@dimen/group_small" android:layout_marginEnd="16dp"/>
         <ImageButton android:id="@+id/theme" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/group_card" android:padding="12dp" android:src="@drawable/group_ic_moon" android:contentDescription="@string/group_switch_night"/>
     </LinearLayout>
-    <LinearLayout android:layout_width="match_parent"  android:orientation="horizontal" android:baselineAligned="false" android:layout_height="0dp" android:layout_weight="1" android:background="@drawable/group_shell" android:clipToOutline="true" android:layout_marginStart="@dimen/group_outer" android:layout_marginEnd="@dimen/group_outer" android:layout_marginBottom="@dimen/group_outer">
-        <FrameLayout android:layout_width="0dp" android:layout_weight="0.41" android:layout_height="match_parent" android:background="@color/group_hero">
-            <ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/group_hero_decor" android:scaleType="fitXY" android:importantForAccessibility="no"/>
-            <LinearLayout android:layout_width="match_parent"  android:orientation="vertical" android:layout_height="match_parent" android:padding="@dimen/group_hero_padding">
-                <TextView  style="@style/Group.Text" android:text="@string/group_wait_label" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted" android:textStyle="bold"/>
-                <TextView android:id="@+id/waiting_hero_title" style="@style/Group.Text" android:text="@string/group_waiting_hero" android:textSize="@dimen/group_wait_hero_title" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="@dimen/group_hero_gap"/>
-                <TextView android:id="@+id/waiting_group_name" style="@style/Group.Text"  android:textSize="24sp" android:textStyle="bold" android:textColor="#FFFFFF" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="24dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp" android:background="@drawable/group_hero_code" android:layout_marginTop="32dp">
+    <ScrollView android:id="@+id/group_form_scroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:background="@drawable/group_shell" android:clipToOutline="true" android:layout_marginStart="@dimen/group_outer" android:layout_marginEnd="@dimen/group_outer" android:layout_marginBottom="@dimen/group_outer">
+        <LinearLayout android:id="@+id/group_form_panel" android:layout_width="match_parent"  android:orientation="vertical" android:layout_height="wrap_content" android:padding="@dimen/group_panel_padding">
+            <TextView  style="@style/Group.Text" android:text="@string/group_wait_breadcrumb" android:textSize="@dimen/group_small" android:textColor="@color/group_muted"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:gravity="center_vertical" android:layout_marginTop="@dimen/group_block_gap">
+                <TextView android:id="@+id/waiting_title" style="@style/Group.Text" android:text="@string/group_waiting_title" android:layout_width="0dp" android:layout_weight="1" android:textSize="@dimen/group_title" android:textStyle="bold"/>
+                <TextView android:id="@+id/connection_chip" style="@style/Group.Text" android:text="@string/group_connected" android:layout_width="wrap_content" android:textSize="@dimen/group_small" android:textColor="@color/group_success" android:background="@drawable/group_connected" android:padding="12dp"/>
+            </LinearLayout>
+            <TextView android:id="@+id/waiting_intro" style="@style/Group.Text" android:text="@string/group_waiting_intro" android:textColor="@color/group_muted" android:layout_marginTop="8dp"/>
+            <LinearLayout android:id="@+id/group_split_summary" android:layout_width="match_parent"  android:orientation="vertical" android:layout_height="wrap_content" android:padding="16dp" android:background="@drawable/group_hero" android:layout_marginTop="16dp">
+                <TextView  style="@style/Group.Text" android:text="@string/group_wait_label" android:visibility="gone" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted" android:textStyle="bold"/>
+                <TextView android:id="@+id/waiting_hero_title" android:visibility="gone" style="@style/Group.Text" android:text="@string/group_waiting_hero" android:textSize="@dimen/group_wait_hero_title" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="@dimen/group_hero_gap"/>
+                <TextView android:id="@+id/waiting_group_name" style="@style/Group.Text"  android:textSize="24sp" android:textStyle="bold" android:textColor="#FFFFFF" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="0dp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="0dp" android:background="@android:color/transparent" android:layout_marginTop="8dp">
                     <TextView  style="@style/Group.Text" android:text="@string/group_invite_label" android:textColor="@color/group_hero_muted" android:textSize="@dimen/group_small"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:gravity="center_vertical" android:layout_marginTop="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:gravity="center_vertical" android:layout_marginTop="4dp">
                         <TextView android:id="@+id/waiting_code" style="@style/Group.Text"  android:layout_width="0dp" android:layout_weight="1" android:textSize="@dimen/group_title" android:textStyle="bold" android:letterSpacing="0.1" android:textColor="#FFFFFF" android:textIsSelectable="true"/>
                         <ImageButton android:id="@+id/copy_code" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/group_ic_copy" android:background="@drawable/group_pill" android:padding="14dp" android:contentDescription="@string/group_copy_code"/>
                     </LinearLayout>
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="16dp">
-                    <LinearLayout  android:layout_height="wrap_content" android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:background="@drawable/group_hero_stats" android:padding="16dp" android:layout_marginEnd="10dp">
-                        <TextView  style="@style/Group.Text" android:text="@string/group_cars_label" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted"/>
-                        <TextView android:id="@+id/waiting_cars" style="@style/Group.Text"  android:textSize="28sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="8dp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="8dp">
+                    <LinearLayout  android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="0dp" android:layout_weight="1" android:background="@drawable/group_hero_stats" android:padding="8dp" android:layout_marginEnd="10dp">
+                        <TextView android:layout_width="wrap_content"  style="@style/Group.Text" android:text="@string/group_cars_label" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted"/>
+                        <TextView android:layout_width="wrap_content" android:layout_marginStart="8dp" android:id="@+id/waiting_cars" style="@style/Group.Text"  android:textSize="20sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="0dp"/>
                     </LinearLayout>
-                    <LinearLayout  android:layout_height="wrap_content" android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:background="@drawable/group_hero_stats" android:padding="16dp" android:layout_marginEnd="10dp">
-                        <TextView  style="@style/Group.Text" android:text="@string/group_people_label" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted"/>
-                        <TextView android:id="@+id/waiting_people" style="@style/Group.Text"  android:textSize="28sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="8dp"/>
+                    <LinearLayout  android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="0dp" android:layout_weight="1" android:background="@drawable/group_hero_stats" android:padding="8dp" android:layout_marginEnd="10dp">
+                        <TextView android:layout_width="wrap_content"  style="@style/Group.Text" android:text="@string/group_people_label" android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted"/>
+                        <TextView android:layout_width="wrap_content" android:layout_marginStart="8dp" android:id="@+id/waiting_people" style="@style/Group.Text"  android:textSize="20sp" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginTop="0dp"/>
                     </LinearLayout>
                 </LinearLayout>
-                <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" android:minHeight="20dp"/>
-                <TextView android:id="@+id/waiting_rule" style="@style/Group.Text"  android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted" android:lineSpacingExtra="4dp"/>
+                <TextView android:id="@+id/waiting_rule" android:layout_marginTop="8dp" style="@style/Group.Text"  android:textSize="@dimen/group_small" android:textColor="@color/group_hero_muted" android:lineSpacingExtra="4dp"/>
             </LinearLayout>
-        </FrameLayout>
-        <ScrollView android:layout_width="0dp" android:layout_weight="0.59" android:layout_height="match_parent" android:fillViewport="true">
-            <LinearLayout android:layout_width="match_parent"  android:orientation="vertical" android:layout_height="match_parent" android:padding="@dimen/group_panel_padding">
-                <TextView  style="@style/Group.Text" android:text="@string/group_wait_breadcrumb" android:textSize="@dimen/group_small" android:textColor="@color/group_muted"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:gravity="center_vertical" android:layout_marginTop="@dimen/group_block_gap">
-                    <TextView android:id="@+id/waiting_title" style="@style/Group.Text" android:text="@string/group_waiting_title" android:layout_width="0dp" android:layout_weight="1" android:textSize="@dimen/group_title" android:textStyle="bold"/>
-                    <TextView android:id="@+id/connection_chip" style="@style/Group.Text" android:text="@string/group_connected" android:layout_width="wrap_content" android:textSize="@dimen/group_small" android:textColor="@color/group_success" android:background="@drawable/group_connected" android:padding="12dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/group_field" android:padding="20dp" android:layout_marginTop="@dimen/group_block_gap">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" >
+                    <TextView  style="@style/Group.Text" android:text="@string/group_ready_label" android:layout_width="0dp" android:layout_weight="1" android:textStyle="bold" android:textSize="@dimen/group_small"/>
+                    <TextView android:id="@+id/waiting_progress" style="@style/Group.Text"  android:layout_width="wrap_content" android:textStyle="bold" android:textSize="@dimen/group_small"/>
                 </LinearLayout>
-                <TextView android:id="@+id/waiting_intro" style="@style/Group.Text" android:text="@string/group_waiting_intro" android:textColor="@color/group_muted" android:layout_marginTop="8dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/group_field" android:padding="20dp" android:layout_marginTop="@dimen/group_block_gap">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" >
-                        <TextView  style="@style/Group.Text" android:text="@string/group_ready_label" android:layout_width="0dp" android:layout_weight="1" android:textStyle="bold" android:textSize="@dimen/group_small"/>
-                        <TextView android:id="@+id/waiting_progress" style="@style/Group.Text"  android:layout_width="wrap_content" android:textStyle="bold" android:textSize="@dimen/group_small"/>
-                    </LinearLayout>
-                    <ProgressBar android:id="@+id/ready_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="8dp" android:progressTint="@color/group_ink" android:layout_marginTop="16dp"/>
-                </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="@dimen/group_block_gap" android:layout_marginBottom="12dp">
-                    <TextView  style="@style/Group.Text" android:text="@string/group_members" android:layout_width="0dp" android:layout_weight="1" android:textStyle="bold"/>
-                    <TextView android:id="@+id/member_total" style="@style/Group.Text"  android:layout_width="wrap_content" android:textSize="@dimen/group_small" android:textColor="@color/group_muted"/>
-                </LinearLayout>
-                <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="false">
-                    <LinearLayout android:id="@+id/member_list" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
-                </ScrollView>
-                <TextView android:id="@+id/waiting_hint" style="@style/Group.Text"  android:textSize="@dimen/group_small" android:textColor="@color/group_muted" android:layout_marginTop="12dp" android:accessibilityLiveRegion="polite"/>
-                <TextView android:id="@+id/waiting_error" style="@style/Group.Text"  android:textColor="@color/group_error" android:visibility="gone" android:accessibilityLiveRegion="polite"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="16dp">
-                    <com.google.android.material.button.MaterialButton android:id="@+id/toggle_ready" style="@style/Group.Primary" android:text="@string/group_ready_check" android:layout_width="0dp" android:layout_weight="1"/>
-                    <com.google.android.material.button.MaterialButton android:id="@+id/start_trip" style="@style/Group.Primary" android:text="@string/group_start_action" android:layout_width="0dp" android:layout_weight="1" android:layout_marginStart="12dp" app:icon="@drawable/group_ic_arrow" app:iconGravity="textEnd"/>
-                </LinearLayout>
-                <com.google.android.material.button.MaterialButton android:id="@+id/leave_group" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_gravity="end" android:text="@string/group_dissolve" android:textColor="@color/group_error" android:textSize="@dimen/group_small"/>
-                <com.google.android.material.button.MaterialButton android:id="@+id/back_lobby" style="@style/Group.Primary" android:text="@string/group_back_lobby" android:layout_width="match_parent" android:visibility="gone"/>
+                <ProgressBar android:id="@+id/ready_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="8dp" android:progressTint="@color/group_ink" android:layout_marginTop="16dp"/>
             </LinearLayout>
-        </ScrollView>
-    </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="@dimen/group_block_gap" android:layout_marginBottom="12dp">
+                <TextView  style="@style/Group.Text" android:text="@string/group_members" android:layout_width="0dp" android:layout_weight="1" android:textStyle="bold"/>
+                <TextView android:id="@+id/member_total" style="@style/Group.Text"  android:layout_width="wrap_content" android:textSize="@dimen/group_small" android:textColor="@color/group_muted"/>
+            </LinearLayout>
+            <ScrollView android:id="@+id/group_member_scroll" android:layout_width="match_parent" android:layout_height="200dp"  android:fillViewport="false">
+                <LinearLayout android:id="@+id/member_list" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+            </ScrollView>
+            <TextView android:id="@+id/waiting_hint" style="@style/Group.Text"  android:textSize="@dimen/group_small" android:textColor="@color/group_muted" android:layout_marginTop="12dp" android:accessibilityLiveRegion="polite"/>
+            <TextView android:id="@+id/waiting_error" style="@style/Group.Text"  android:textColor="@color/group_error" android:visibility="gone" android:accessibilityLiveRegion="polite"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false" android:layout_marginTop="16dp">
+                <com.google.android.material.button.MaterialButton android:id="@+id/toggle_ready" style="@style/Group.Primary" android:text="@string/group_ready_check" android:layout_width="0dp" android:layout_weight="1"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/start_trip" style="@style/Group.Primary" android:text="@string/group_start_action" android:layout_width="0dp" android:layout_weight="1" android:layout_marginStart="12dp" app:icon="@drawable/group_ic_arrow" app:iconGravity="textEnd"/>
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/leave_group" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_gravity="end" android:text="@string/group_dissolve" android:textColor="@color/group_error" android:textSize="@dimen/group_small"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/back_lobby" style="@style/Group.Primary" android:text="@string/group_back_lobby" android:layout_width="match_parent" android:visibility="gone"/>
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>
