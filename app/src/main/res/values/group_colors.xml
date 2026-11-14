@@ -1,8 +1,9 @@
 <resources>
-<color name="group_background">#F3F0E9</color><color name="group_surface">#FFFDF8</color>
-<color name="group_field">#F3F0E9</color><color name="group_ink">#24221E</color>
-<color name="group_muted">#706C64</color><color name="group_line">#D7D1C7</color>
-<color name="group_on_accent">#FFFDF8</color><color name="group_hero">#18191B</color>
-<color name="group_hero_muted">#B8B9BD</color><color name="group_error">#AC343D</color>
-<color name="group_disabled">#B9B3A9</color>
+<color name="group_background">#F2F2F0</color><color name="group_surface">#FFFFFF</color>
+<color name="group_field">#F8F8F7</color><color name="group_ink">#1C1D1F</color>
+<color name="group_muted">#75777C</color><color name="group_line">#E6E7E7</color>
+<color name="group_on_accent">#FFFFFF</color><color name="group_hero">#18191B</color>
+<color name="group_hero_muted">#AAADB2</color><color name="group_error">#AB4445</color>
+<color name="group_disabled">#9B9C9C</color><color name="group_success">#247957</color>
+<color name="group_success_surface">#F1F6F2</color>
 </resources>

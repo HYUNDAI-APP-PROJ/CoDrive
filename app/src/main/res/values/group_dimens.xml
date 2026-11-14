@@ -1,0 +1,9 @@
+<resources>
+<dimen name="group_header">64dp</dimen><dimen name="group_outer">20dp</dimen>
+<dimen name="group_panel_padding">28dp</dimen><dimen name="group_hero_padding">32dp</dimen>
+<dimen name="group_hero_title">38sp</dimen><dimen name="group_wait_hero_title">32sp</dimen>
+<dimen name="group_title">26sp</dimen><dimen name="group_body">16sp</dimen><dimen name="group_small">13sp</dimen>
+<dimen name="group_control">48dp</dimen><dimen name="group_label_gap">12dp</dimen>
+<dimen name="group_block_gap">16dp</dimen><dimen name="group_hero_gap">24dp</dimen>
+<dimen name="group_member_height">80dp</dimen><dimen name="group_radius">24dp</dimen>
+</resources>

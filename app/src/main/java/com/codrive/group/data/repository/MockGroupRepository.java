@@ -78,7 +78,7 @@ public final class MockGroupRepository {
         activeGroupId = UUID.randomUUID().toString();
         activeMemberId = UUID.randomUUID().toString();
         List<GroupMember> members = new ArrayList<>();
-        members.add(new GroupMember(activeMemberId, alias.trim(), count, true, false, true));
+        members.add(new GroupMember(activeMemberId, vehicleAlias(alias), count, true, false, true));
         GroupSession group = new GroupSession(activeGroupId, name.trim(), code, activeMemberId,
                 rule, GroupSession.WAITING, members, 0);
         groups.put(group.groupId, group);
@@ -98,7 +98,7 @@ public final class MockGroupRepository {
                 activeMemberId = UUID.randomUUID().toString();
                 activeGroupId = group.groupId;
                 List<GroupMember> members = new ArrayList<>(group.members);
-                members.add(new GroupMember(activeMemberId, alias.trim(), count, false, false, true));
+                members.add(new GroupMember(activeMemberId, vehicleAlias(alias), count, false, false, true));
                 GroupSession updated = copy(group, group.status, members, group.leaderDisconnectDeadline);
                 groups.put(group.groupId, updated);
                 save();
@@ -172,7 +172,7 @@ public final class MockGroupRepository {
         if (group.members.size() >= 12) throw new IllegalArgumentException("참여 차량 수가 가득 찼어요.");
         String id = UUID.randomUUID().toString();
         List<GroupMember> members = new ArrayList<>(group.members);
-        members.add(new GroupMember(id, alias.trim(), count, false, false, true));
+        members.add(new GroupMember(id, vehicleAlias(alias), count, false, false, true));
         groups.put(groupId, copy(group, group.status, members, group.leaderDisconnectDeadline));
         save();
         return id;
@@ -216,9 +216,13 @@ public final class MockGroupRepository {
             handler.postDelayed(expiry, Math.max(1, earliest - System.currentTimeMillis()));
     }
 
+    private String vehicleAlias(String alias) {
+        return alias == null || alias.trim().isEmpty() ? "내 차량" : alias.trim();
+    }
+
     private void validateVehicle(String alias, int count) {
-        if (alias == null || alias.trim().isEmpty() || alias.trim().length() > 20)
-            throw new IllegalArgumentException("차량 별칭을 1~20자로 입력해 주세요.");
+        if (alias != null && alias.trim().length() > 20)
+            throw new IllegalArgumentException("차량 별칭은 20자 이내로 입력해 주세요.");
         if (count < 1 || count > 9) throw new IllegalArgumentException("탑승 인원은 1~9명으로 입력해 주세요.");
     }
 

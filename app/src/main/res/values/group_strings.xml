@@ -1,6 +1,6 @@
 <resources>
 <string name="group_brand">CoDrive</string>
-<string name="group_tagline">차는 따로 타도 여행은 함께.</string>
+<string name="group_tagline">차는 따로 타도\n여행은 함께.</string>
 <string name="group_hero_label">여행의 시작을 함께</string>
 <string name="group_intro">서로 다른 차 안에서도 하나의 여행처럼.\n함께할 차량을 연결하고 출발을 준비하세요.</string>
 <string name="group_create_title">새 여행 그룹 만들기</string>
@@ -16,9 +16,9 @@
 <string name="group_rule">의사결정 방식</string>
 <string name="group_majority">다수결</string>
 <string name="group_leader_rule">리더 결정</string>
-<string name="group_rule_note">전체 경로 변경은 모든 차량의 동의가 필요해요.</string>
+<string name="group_rule_note">전체 경로 변경은 선택한 방식과 관계없이 모든 차량의 동의가 필요해요.</string>
 <string name="group_invite">6자리 초대 코드</string>
-<string name="group_code_hint">ABC123</string>
+<string name="group_code_hint">● ● ● ● ● ●</string>
 <string name="group_join_note">리더에게 받은 초대 코드로 함께할 여행에 참여하세요.</string>
 <string name="group_waiting_title">출발 대기실</string>
 <string name="group_waiting_hero">함께 떠날 준비를\n확인해요.</string>
@@ -59,4 +59,34 @@
 <string name="group_theme_day">주간</string>
 <string name="group_theme_night">야간</string>
 <string name="group_rule_summary">일반 장소 제안 · %1$s\n전체 경로 변경 · 전원 동의</string>
+<string name="group_switch_day">주간 모드로 전환</string>
+<string name="group_switch_night">야간 모드로 전환</string>
+<string name="group_context">여행 그룹</string>
+<string name="group_breadcrumb">함께 여행  ›  그룹 연결</string>
+<string name="group_wait_breadcrumb">함께 여행  ›  출발 대기실</string>
+<string name="group_create_subtitle">그룹을 만들고 함께 떠날 차량을 초대하세요.</string>
+<string name="group_join_subtitle">초대받은 여행 그룹에 내 차량을 연결하세요.</string>
+<string name="group_alias_optional">내 차량 별칭</string>
+<string name="group_alias_join_hint">예: 친구네 차</string>
+<string name="group_minus">−</string><string name="group_plus">+</string>
+<string name="group_count_unit">명</string>
+<string name="group_count_down">탑승 인원 줄이기</string><string name="group_count_up">탑승 인원 늘리기</string>
+<string name="group_rule_title">장소 제안 의사결정</string>
+<string name="group_majority_card">다수결\n참여 차량의 투표로 결정</string>
+<string name="group_leader_card">리더 결정\n의견을 모아 리더가 결정</string>
+<string name="group_pill_cars">함께하는 차량</string>
+<string name="group_pill_ready">✓  출발 준비 확인</string>
+<string name="group_pill_trip">공동 여행</string>
+<string name="group_join_help">그룹 리더에게 받은 초대 코드를 입력하면 참여 차량 목록과 출발 준비 상태를 확인할 수 있어요.</string>
+<string name="group_wait_label">●  출발을 기다리는 여행</string>
+<string name="group_connected">●  그룹 연결됨</string>
+<string name="group_empty_members">아직 다른 차량이 없어요.\n초대 코드로 친구들을 초대해요.</string>
+<string name="group_total_cars">총 %1$d대</string>
+<string name="group_cars_label">참여 차량</string><string name="group_people_label">전체 탑승 인원</string>
+<string name="group_cars_value">%1$d대</string><string name="group_people_value">%1$d명</string>
+<string name="group_invite_label">초대 코드</string>
+<string name="group_ready_count">%1$d / %2$d대</string>
+<string name="group_ready_label">출발 준비 현황</string>
+<string name="group_ready_check">✓  준비 완료</string>
+<string name="group_start_action">여행 시작하기</string>
 </resources>

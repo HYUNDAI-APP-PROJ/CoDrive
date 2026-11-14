@@ -26,6 +26,7 @@ public final class GroupWaitingActivity extends GroupScreenActivity {
     public static final String EXTRA_GROUP_ID = "com.codrive.group.GROUP_ID";
     private GroupWaitingViewModel model;
     private GroupWaitingUiState latest;
+    private GroupSession renderedMembers;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         @Override public void run() {
@@ -104,19 +105,21 @@ public final class GroupWaitingActivity extends GroupScreenActivity {
         GroupSession group = state.group;
         text(R.id.waiting_group_name, group.groupName);
         text(R.id.waiting_code, group.inviteCode);
-        text(R.id.waiting_stats, getString(R.string.group_stats, group.members.size(), group.passengerCount()));
+        text(R.id.waiting_cars, getString(R.string.group_cars_value, group.members.size()));
+        text(R.id.waiting_people, getString(R.string.group_people_value, group.passengerCount()));
+        text(R.id.member_total, getString(R.string.group_total_cars, group.members.size()));
         text(R.id.waiting_rule, getString(R.string.group_rule_summary,
                 getString("LEADER".equals(group.decisionRule) ? R.string.group_leader_rule : R.string.group_majority)));
         text(R.id.waiting_title, getString(state.started ? R.string.group_started_title : R.string.group_waiting_title));
         text(R.id.waiting_hero_title, getString(state.started ? R.string.group_started_title : R.string.group_waiting_hero));
         text(R.id.waiting_intro, getString(state.started ? R.string.group_started_message : R.string.group_waiting_intro));
-        text(R.id.toggle_ready, getString(state.me.isReady ? R.string.group_unready : R.string.group_ready));
+        text(R.id.toggle_ready, getString(state.me.isReady ? R.string.group_unready : R.string.group_ready_check));
         text(R.id.leave_group, getString(state.me.isLeader ? R.string.group_dissolve : R.string.group_leave));
         findViewById(R.id.toggle_ready).setEnabled(state.me.isConnected);
         findViewById(R.id.start_trip).setEnabled(state.canStart);
         int ready = 0;
         for (GroupMember member : group.members) if (member.isConnected && member.isReady) ready++;
-        text(R.id.waiting_progress, getString(R.string.group_progress, ready, group.members.size()));
+        text(R.id.waiting_progress, getString(R.string.group_ready_count, ready, group.members.size()));
         ProgressBar progress = findViewById(R.id.ready_progress);
         progress.setMax(group.members.size()); progress.setProgress(ready);
         String hint = getString(state.started ? R.string.group_started_message
@@ -127,10 +130,24 @@ public final class GroupWaitingActivity extends GroupScreenActivity {
             hint = getString(R.string.group_leader_reconnect, seconds);
         }
         text(R.id.waiting_hint, hint);
+        if (renderedMembers == group) return;
+        renderedMembers = group;
         LinearLayout list = findViewById(R.id.member_list);
         list.removeAllViews();
+        boolean twoColumns = getResources().getConfiguration().screenWidthDp >= 1000;
+        LinearLayout pair = null;
+        int index = 0;
         for (GroupMember member : group.members) {
-            View row = getLayoutInflater().inflate(R.layout.item_group_member, list, false);
+            if (!twoColumns || index % 2 == 0) {
+                pair = new LinearLayout(this);
+                pair.setOrientation(LinearLayout.HORIZONTAL);
+                pair.setBaselineAligned(false);
+                LinearLayout.LayoutParams pairParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                pairParams.bottomMargin = dp(12);
+                list.addView(pair, pairParams);
+            }
+            View row = getLayoutInflater().inflate(R.layout.item_group_member, pair, false);
             ((TextView)row.findViewById(R.id.member_alias)).setText(member.alias);
             ((TextView)row.findViewById(R.id.member_detail)).setText(getString(R.string.group_vehicle_detail,
                     member.passengerCount, getString(member.isLeader ? R.string.group_leader : R.string.group_vehicle),
@@ -138,7 +155,34 @@ public final class GroupWaitingActivity extends GroupScreenActivity {
             ((TextView)row.findViewById(R.id.member_status)).setText(!member.isConnected
                     ? R.string.group_disconnected : state.started ? R.string.group_started_member
                     : member.isReady ? R.string.group_ready : R.string.group_waiting);
-            list.addView(row);
+            LinearLayout.LayoutParams card = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            if (twoColumns && index % 2 == 1) card.setMarginStart(dp(12));
+            pair.addView(row, card);
+            index++;
         }
+        if (group.members.size() == 1) {
+            TextView empty = new TextView(this);
+            empty.setText(R.string.group_empty_members);
+            empty.setTextColor(getColor(R.color.group_muted));
+            empty.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                    getResources().getDimension(R.dimen.group_small));
+            empty.setGravity(android.view.Gravity.CENTER);
+            empty.setPadding(dp(16), dp(16), dp(16), dp(16));
+            empty.setBackgroundResource(R.drawable.group_empty);
+            empty.setMinimumHeight((int)getResources().getDimension(R.dimen.group_member_height));
+            if (twoColumns && pair != null) {
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
+                params.setMarginStart(dp(12));
+                pair.addView(empty, params);
+            } else {
+                list.addView(empty);
+            }
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }

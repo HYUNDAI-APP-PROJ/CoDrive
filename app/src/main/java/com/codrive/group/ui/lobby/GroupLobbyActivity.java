@@ -44,6 +44,8 @@ public final class GroupLobbyActivity extends GroupScreenActivity {
         };
         for (EditText input : new EditText[]{name, code, alias, count}) input.addTextChangedListener(watcher);
         rule.setOnCheckedChangeListener((group, checked) -> capture());
+        findViewById(R.id.passengers_minus).setOnClickListener(v -> changeCount(-1));
+        findViewById(R.id.passengers_plus).setOnClickListener(v -> changeCount(1));
         findViewById(R.id.create_tab).setOnClickListener(v -> switchTab(false));
         findViewById(R.id.join_tab).setOnClickListener(v -> switchTab(true));
         findViewById(R.id.submit).setOnClickListener(v -> { capture(); model.submit(); });
@@ -59,6 +61,23 @@ public final class GroupLobbyActivity extends GroupScreenActivity {
                 alias.getText().toString(), count.getText().toString(),
                 rule.getCheckedRadioButtonId() == R.id.rule_leader ? "LEADER" : "MAJORITY");
     }
+    private void changeCount(int delta) {
+        int current;
+        try { current = Integer.parseInt(count.getText().toString()); }
+        catch (NumberFormatException ignored) { current = 2; }
+        count.setText(String.valueOf(Math.max(1, Math.min(9, current + delta))));
+        capture();
+        updateCounter();
+    }
+
+    private void updateCounter() {
+        int current;
+        try { current = Integer.parseInt(count.getText().toString()); }
+        catch (NumberFormatException ignored) { current = 2; }
+        findViewById(R.id.passengers_minus).setEnabled(current > 1);
+        findViewById(R.id.passengers_plus).setEnabled(current < 9);
+    }
+
     private void switchTab(boolean joining) { capture(); model.tab(joining); }
     private void set(EditText input, String text) {
         if (!input.getText().toString().equals(text)) input.setText(text);
@@ -79,12 +98,20 @@ public final class GroupLobbyActivity extends GroupScreenActivity {
         findViewById(R.id.rule_field).setVisibility(state.joining ? View.GONE : View.VISIBLE);
         findViewById(R.id.create_tab).setSelected(!state.joining);
         findViewById(R.id.join_tab).setSelected(state.joining);
-        findViewById(R.id.create_tab).setAlpha(state.joining ? 0.55f : 1f);
-        findViewById(R.id.join_tab).setAlpha(state.joining ? 1f : 0.55f);
+        ((TextView)findViewById(R.id.create_tab)).setTextColor(getColor(
+                state.joining ? R.color.group_muted : R.color.group_ink));
+        ((TextView)findViewById(R.id.join_tab)).setTextColor(getColor(
+                state.joining ? R.color.group_ink : R.color.group_muted));
+        ((TextView)findViewById(R.id.form_subtitle)).setText(state.joining
+                ? R.string.group_join_subtitle : R.string.group_create_subtitle);
+        findViewById(R.id.join_help).setVisibility(state.joining ? View.VISIBLE : View.GONE);
+        findViewById(R.id.form_note).setVisibility(state.joining ? View.GONE : View.VISIBLE);
+        alias.setHint(state.joining ? R.string.group_alias_join_hint : R.string.group_alias_hint);
+        code.setHint(R.string.group_code_hint);
+        updateCounter();
         ((TextView)findViewById(R.id.form_title)).setText(state.joining
                 ? R.string.group_join_title : R.string.group_create_title);
-        ((TextView)findViewById(R.id.form_note)).setText(state.joining
-                ? R.string.group_join_note : R.string.group_rule_note);
+        ((TextView)findViewById(R.id.form_note)).setText(R.string.group_rule_note);
         ((TextView)findViewById(R.id.submit)).setText(state.joining
                 ? R.string.group_join_action : R.string.group_create);
         name.setError(state.nameError); code.setError(state.codeError);

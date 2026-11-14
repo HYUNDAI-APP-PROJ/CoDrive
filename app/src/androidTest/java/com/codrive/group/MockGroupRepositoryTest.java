@@ -16,6 +16,20 @@ public class MockGroupRepositoryTest {
         String active = repository.activeGroupId();
         if (active != null) repository.leaveGroup(active, repository.activeMemberId());
     }
+    @Test public void groupNameRequiredAndVehicleAliasOptional() {
+        try {
+            repository.createGroup("   ", "", 2, "MAJORITY");
+            fail("Group name must remain required");
+        } catch (IllegalArgumentException expected) { }
+        GroupSession group = repository.createGroup("주말 여행", "   ", 2, "MAJORITY");
+        assertEquals("내 차량", group.member(group.leaderId).alias);
+        repository.clearLocalIdentityForTesting();
+        GroupSession joined = repository.joinGroup(group.inviteCode, null, 2);
+        assertEquals("내 차량", joined.member(repository.activeMemberId()).alias);
+        repository.leaveGroup(group.groupId, repository.activeMemberId());
+        repository.dissolveGroup(group.groupId, group.leaderId);
+    }
+
     @Test public void validatesReadinessAndLeaderAuthority() {
         GroupSession group = repository.createGroup("여행", "리더 차량", 2, "MAJORITY");
         assertTrue(group.inviteCode.matches("[A-Z0-9]{6}"));
