@@ -23,9 +23,11 @@
       displayOrder: vehicle.displayOrder,
       isMine: vehicle.vehicleId === myVehicleId,
       connection: vehicle.connection, // VehicleStatus.Connection: ONLINE · RECONNECTING · OFFLINE
-      // value: { arrived, placeId, placeName, arrivedAt }. 연결이 끊긴 차량은 도착 여부를 알 수 없으므로 NO_DATA.
+      // value: { arrived, placeId, placeName, placeCategory, arrivedAt }. 연결이 끊긴 차량은 도착 여부를 알 수 없으므로 NO_DATA.
+      // placeCategory: 'REST_AREA'(휴게소) 등 장소 종류. 실제 데이터에서 종류를 알 수 없으면 null.
       arrival: vehicle.connection === 'ONLINE'
-        ? M.create({ arrived: vehicle.arrived, placeId: vehicle.placeId, placeName: vehicle.placeName, arrivedAt: vehicle.arrivedAt },
+        ? M.create({ arrived: vehicle.arrived, placeId: vehicle.placeId, placeName: vehicle.placeName,
+          placeCategory: vehicle.placeCategory, arrivedAt: vehicle.arrivedAt },
           M.QUALITY.AVAILABLE, at, SOURCE)
         : M.missing(M.QUALITY.NO_DATA, SOURCE)
     });

@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CoDrive · 도전과제</title>
+  <style>
+    /* ---- route-recommendation.html 에서 복사한 공통 골격 (값 변경 없음) ---- */
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+      color: #24221e; background: #f3f0e9; color-scheme: light;
+      --accent: #24221e; --on-accent: #fffdf8; --muted: #706c64; --line: #d7d1c7; --surface: #fffdf8;
+      --message-radius: 41px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 140ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out; }
+    button:not(:disabled):not(.auto-toggle):active { transform: scale(.96); filter: brightness(.94); box-shadow: inset 0 2px 4px #24221e20; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .shell { height: 100dvh; display: grid; grid-template-columns: 220px 280px minmax(0, 1fr); background: #f3f0e9; }
+    .sidebar { width: 220px; padding: 32px 16px; flex-shrink: 0; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .brand { margin: 0 12px 40px; font-size: 26px; font-weight: 700; letter-spacing: -.7px; }
+    .nav { display: grid; gap: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 14px 12px; border-radius: 6px; font-size: 18px; color: #aaa7a0; }
+    .nav-item.active { color: #24221e; background: #f3f0e9; font-weight: 600; }
+    .main { min-width: 0; min-height: 0; flex: 1; padding: 28px 40px 24px; display: flex; flex-direction: column; overflow-y: auto; }
+    .top { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+    .breadcrumb { min-width: 0; margin-right: auto; display: grid; gap: 6px; font-size: 24px; font-weight: 600; opacity: 0; transform: translateX(-20px); visibility: hidden; transition: opacity 240ms ease-out, transform 320ms cubic-bezier(.22, 1, .36, 1), visibility 0s 320ms; }
+    .breadcrumb[aria-hidden="false"] { opacity: 1; transform: translateX(0); visibility: visible; transition-delay: 0s; }
+    .context-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; }
+    .context-title { min-width: 0; overflow-wrap: anywhere; }
+    .group-count { color: var(--muted); font-size: 18px; font-weight: 400; white-space: nowrap; }
+    .group-members { color: var(--muted); font-size: 16px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+    .mode-control { display: flex; flex-shrink: 0; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; }
+    .mode-control button { min-height: 64px; padding: 12px 24px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 18px; }
+    .mode-control button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    @keyframes conversation-enter { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reply-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .route-sidebar { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 32px 24px; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .route-header { display: flex; align-items: center; gap: 12px; }
+    .route-header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+    .route-owner { margin: 8px 0 0 36px; color: #aaa7a0; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .route-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 0; text-align: center; color: #aaa7a0; animation: conversation-enter 240ms ease-out; }
+    .route-empty > svg { width: 32px; height: 32px; }
+    .route-empty p { margin: 0; font-size: 18px; line-height: 1.6; word-break: keep-all; }
+    .route-active { margin-top: 32px; animation: conversation-enter 240ms ease-out; }
+    .route-source { margin: 0 0 28px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-timeline { margin: 0; padding: 0; list-style: none; }
+    .route-point { position: relative; padding: 0 0 36px 32px; }
+    .route-point::before { position: absolute; z-index: 1; left: 3px; top: 6px; width: 10px; height: 10px; border: 2px solid #aaa7a0; border-radius: 50%; background: #151515; content: ""; }
+    .route-point:not(:last-child)::after { position: absolute; left: 8px; top: 16px; bottom: -6px; width: 1px; background: #393938; content: ""; }
+    .route-point:first-child::before { border-color: #f3f0e9; background: #f3f0e9; box-shadow: 0 0 0 4px #393938; }
+    .route-point:last-child { padding-bottom: 0; }
+    .route-point:last-child::before { top: 0; width: 24px; height: 24px; border: 0; border-radius: 0; background: #f3f0e9; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .route-point-label { margin: 0 0 8px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-point-name { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+    h1 { margin: 0 0 24px; font-size: 28px; font-weight: 600; }
+
+    /* ---- 이 화면 전용 (공통 색상·곡률·간격만 사용) ---- */
+    .challenges { width: min(100%, 1040px); margin: 0 auto; padding: 24px 0; display: grid; gap: 24px; }
+    .challenges h1 { margin: 0; }
+    .summary { margin: -16px 0 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+    .summary strong { color: var(--accent); font-weight: 600; }
+    .notice { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 24px 32px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--message-radius); animation: reply-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
+    .notice-text { min-width: 0; display: grid; gap: 6px; }
+    .notice-title { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.4; }
+    .notice-list { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .notice-close { min-height: 64px; padding: 16px 28px; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); background: var(--surface); font-size: 18px; white-space: nowrap; }
+    .notice-close:hover { background: #e9e4da; }
+    .mark { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); }
+    .mark svg { width: 22px; height: 22px; }
+    .mark.is-achieved { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+    .challenge-list { margin: 0; padding: 0; list-style: none; }
+    .challenge { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "mark body state"; align-items: start; gap: 4px 16px; padding: 24px 0; }
+    .challenge + .challenge { border-top: 1px solid var(--line); }
+    .challenge .mark { grid-area: mark; }
+    .challenge-body { grid-area: body; min-width: 0; display: grid; gap: 6px; }
+    .challenge-title { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.5; }
+    .challenge-description { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; word-break: keep-all; }
+    .challenge-detail { margin: 4px 0 0; font-size: 18px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+    .progress { width: min(100%, 360px); height: 4px; margin-top: 8px; overflow: hidden; border-radius: 2px; background: #e6e0d7; }
+    .progress-fill { height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(var(--progress, 0)); transition: transform 420ms cubic-bezier(.22, 1, .36, 1); }
+    .challenge-state { grid-area: state; padding-top: 6px; color: var(--muted); font-size: 18px; line-height: 1.4; white-space: nowrap; }
+    .challenge.is-achieved .challenge-state { color: var(--accent); font-weight: 600; }
+
+    /* ---- route-recommendation.html 에서 복사한 반응형 규칙 ---- */
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 80px 220px minmax(0, 1fr); }
+      .sidebar { width: 80px; padding: 28px 12px; }
+      .brand { margin: 0 0 36px; text-align: center; font-size: 22px; }
+      .brand-full, .nav-item span { display: none; }
+      .nav-item { justify-content: center; padding: 14px 0; }
+      .main { padding: 24px; }
+      .breadcrumb { font-size: 22px; }
+      .route-sidebar { padding: 28px 20px; }
+    }
+    @media (min-width: 1101px) { .brand-short { display: none; } }
+    @media (max-width: 900px) {
+      .top { gap: 20px; }
+      .mode-control button { flex: 1; }
+    }
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 80px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .sidebar { grid-column: 1; grid-row: 1 / -1; }
+      .main { grid-column: 2; grid-row: 1; }
+      .route-sidebar { grid-column: 2; grid-row: 2; max-height: 32dvh; padding: 20px 24px; border-right: 0; border-top: 1px solid #393938; }
+      .route-empty { flex-direction: row; justify-content: flex-start; padding: 16px 0 0; text-align: left; }
+      .route-active { margin-top: 20px; }
+      .route-source { margin-bottom: 20px; }
+    }
+    @media (max-width: 600px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .main, .route-sidebar { grid-column: 1; }
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      .challenge { grid-template-columns: 40px minmax(0, 1fr); grid-template-areas: "mark body" ". state"; }
+      .challenge-state { padding-top: 0; }
+      .notice { grid-template-columns: 40px minmax(0, 1fr); padding: 20px 24px; }
+      .notice-close { grid-column: 1 / -1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button, .breadcrumb, .progress-fill { transition: none; }
+      .route-empty, .route-active, .notice { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></symbol>
+      <symbol id="i-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.8 7.5M3 4v7h7m2-4v6l4 2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+      <symbol id="i-question" viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14m0 3.5v.01"/></symbol>
+    </defs>
+  </svg>
+  <div class="shell">
+    <!-- 사이드 메뉴: route-recommendation.html 과 같은 항목. 이 화면은 "여행 기록" 아래 화면이다. -->
+    <aside class="sidebar" aria-label="주요 메뉴">
+      <div class="brand"><span class="brand-full">CoDrive</span><span class="brand-short">Co</span></div>
+      <nav class="nav" aria-label="화면 구성 미리보기">
+        <div class="nav-item" aria-label="여행 시작, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-home"/></svg><span>여행 시작</span></div>
+        <div class="nav-item" aria-label="우리 그룹, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-group"/></svg><span>우리 그룹</span></div>
+        <div class="nav-item" aria-label="실시간 주행, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-pin"/></svg><span>실시간 주행</span></div>
+        <div class="nav-item" aria-label="AI 경로 추천"><svg aria-hidden="true"><use href="#i-route"/></svg><span>AI 경로 추천</span></div>
+        <div class="nav-item" aria-label="음성 채널, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>음성 채널</span></div>
+        <div class="nav-item active" aria-label="여행 기록" aria-current="page"><svg aria-hidden="true"><use href="#i-history"/></svg><span>여행 기록</span></div>
+      </nav>
+    </aside>
+    <aside class="route-sidebar" aria-labelledby="route-heading">
+      <header class="route-header"><svg aria-hidden="true"><use href="#i-route"/></svg><h2 id="route-heading">현재 경로</h2></header>
+      <p class="route-owner" id="route-owner" hidden></p>
+      <div class="route-empty" id="route-empty"><svg aria-hidden="true"><use href="#i-pin"/></svg><p>안내 중인 경로가 없어요</p></div>
+      <div class="route-active" id="route-active" hidden>
+        <p class="route-source" id="route-source"></p>
+        <ol class="route-timeline" id="route-timeline" aria-label="현재 위치부터 목적지까지"></ol>
+      </div>
+    </aside>
+    <main class="main" id="main">
+      <header class="top">
+        <div class="breadcrumb" id="context-label" aria-hidden="true">
+          <div class="context-heading"><span class="context-title" id="context-title"></span><span class="group-count" id="context-count"></span></div>
+          <span class="group-members" id="context-members"></span>
+        </div>
+      </header>
+      <section class="challenges" id="challenges" aria-labelledby="heading">
+        <h1 id="heading">함께하는 도전과제</h1>
+        <p class="summary" id="summary"></p>
+        <section class="notice" id="notice" role="status" aria-labelledby="notice-title" hidden>
+          <span class="mark is-achieved" aria-hidden="true"><svg><use href="#i-check"/></svg></span>
+          <div class="notice-text"><p class="notice-title" id="notice-title">새로 달성했어요</p><p class="notice-list" id="notice-list"></p></div>
+          <button class="notice-close" id="notice-close" type="button">확인</button>
+        </section>
+        <ul class="challenge-list" id="challenge-list" aria-label="도전과제 목록"></ul>
+      </section>
+    </main>
+  </div>
+  <template id="challenge-template">
+    <li class="challenge">
+      <span class="mark" aria-hidden="true"><svg><use href="#i-minus"/></svg></span>
+      <div class="challenge-body">
+        <p class="challenge-title"></p>
+        <p class="challenge-description"></p>
+        <p class="challenge-detail"></p>
+        <div class="progress" aria-hidden="true" hidden><div class="progress-fill"></div></div>
+      </div>
+      <span class="challenge-state"></span>
+    </li>
+  </template>
+  <script src="js/measurement.js"></script>
+  <script src="js/mock-scenario.js"></script>
+  <script src="js/vehicle.js"></script>
+  <script src="js/navi.js"></script>
+  <script src="js/group.js"></script>
+  <script src="js/play-safety.js"></script>
+  <script src="js/trip-log.js"></script>
+  <script src="js/challenge-rules.js"></script>
+  <script src="js/dev-panel.js"></script> <!-- ?dev=1 일 때만 시연 패널 표시 -->
+  <script>
+    (() => {
+      'use strict';
+      // 값은 모듈 함수로만 읽고, 판정은 challenge-rules.js 에 맡긴다. 이 화면은 결과를 문구로 바꿔 보여주기만 한다.
+      // 주행 중에는 조작할 것이 없는 읽기 전용 화면이다. 새 달성 알림은 쌓아 두었다가 isSafeToPlay() 가 true 일 때 보여준다.
+      const { CoDriveMeasurement: M, CoDriveVehicle: vehicle, CoDriveNavi: navi, CoDriveGroup: group,
+        CoDrivePlaySafety: safety, CoDriveTripLog: tripLog, CoDriveChallengeRules: rules } = window;
+      const { STATUS, RULES } = rules;
+      const STORAGE_KEY = 'codrive.fun.challenges.v1';
+      const $ = id => document.getElementById(id);
+
+      // ---- 문구 ----
+      const ORDINAL = ['', '첫', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+      const ordinal = n => (ORDINAL[n] || String(n)) + ' 번째';
+      function duration(seconds) {
+        const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds % 3600 / 60);
+        if (!hours && !minutes) return '1분 미만';
+        return [hours && hours + '시간', minutes && minutes + '분'].filter(Boolean).join(' ');
+      }
+      const minutesLeft = seconds => Math.max(1, Math.ceil(seconds / 60)) + '분';
+      const LIMIT = duration(RULES.REST_MAX_DRIVING_SECONDS), REST = duration(RULES.REST_MIN_SECONDS);
+      const TARGET = Math.round(RULES.EFFICIENCY_TARGET_RATIO * 100) + '%';
+      const DESCRIPTION = {
+        'rest-before-2h': `연속 운전 ${LIMIT}이 되기 전에 ${REST} 이상 쉬어가요. 한국도로공사 권장 기준이에요.`,
+        'smooth-driving': `공인 연비의 ${TARGET} 이상으로 달려요. 전기차는 공인 전비로 봐요.`,
+        'perfect-merge': '그룹 차량이 모두 같은 휴게소에 모여요.',
+        unanimous: '여행 중 모든 투표를 만장일치로 정해요.',
+        reunion: `같은 그룹과 ${ordinal(RULES.REUNION_TRIP_NUMBER)} 여행을 떠나요.`
+      };
+      const STATE_TEXT = { ACHIEVED: '달성', IN_PROGRESS: '진행 중', MISSED: '이번엔 놓쳤어요', UNKNOWN: '확인할 수 없어요' };
+      function detail({ id, status, reason, values: v }) {
+        switch (id + ':' + reason) {
+          case 'rest-before-2h:DRIVING': return `연속 운전 ${duration(v.drivingSeconds)} · ${LIMIT}까지 ${minutesLeft(v.remainingSeconds)} 남았어요`;
+          case 'rest-before-2h:RESTING': return (v.restSeconds < 60 ? '휴식을 시작했어요' : `휴식 ${duration(v.restSeconds)}째`) + ` · ${minutesLeft(v.remainingSeconds)} 더 쉬면 달성해요`;
+          case 'rest-before-2h:OVER_LIMIT': return `연속 운전이 ${LIMIT}을 넘었어요. 가까운 곳에서 쉬어가요.`;
+          case 'rest-before-2h:RESTED': case 'rest-before-2h:RECORDED': return `${LIMIT}이 되기 전에 ${REST} 이상 쉬어갔어요.`;
+          case 'rest-before-2h:NO_VEHICLE_DATA': return '차량 주행 정보를 받을 수 없어요.';
+          case 'smooth-driving:ABOVE_TARGET': case 'smooth-driving:BELOW_TARGET': {
+            const word = v.electric ? '전비' : '연비';
+            const text = `공인 ${word} ${v.rated}${v.unit} 대비 ${Math.round(v.ratio * 100)}%`;
+            return reason === 'BELOW_TARGET' ? text + ` · 목표 ${TARGET}` : text;
+          }
+          case 'smooth-driving:RECORDED': return `공인 연비 대비 ${TARGET}를 넘겼어요.`;
+          case 'smooth-driving:NO_VEHICLE_DATA': return '연비 정보를 받을 수 없어요.';
+          case 'perfect-merge:ALL_TOGETHER': return `${v.placeName}에 모두 모였어요.`;
+          case 'perfect-merge:GATHERING': return `${v.total}대 중 ${v.together}대가 같은 휴게소에 있어요.`;
+          case 'perfect-merge:NOT_YET': return '휴게소에서 모두 만나면 달성해요.';
+          case 'perfect-merge:RECORDED': return '같은 휴게소에서 모두 만났어요.';
+          case 'perfect-merge:NO_ARRIVAL_DATA': return '일부 차량의 도착 정보를 받을 수 없어요.';
+          case 'unanimous:SO_FAR': return `지금까지 투표 ${v.voteCount}건 모두 만장일치예요. 여행을 마치면 확정돼요.`;
+          case 'unanimous:NO_VOTES': return status === STATUS.MISSED ? '이번 여행에는 투표가 없었어요.' : '아직 투표가 없어요.';
+          case 'unanimous:SPLIT': return `의견이 나뉜 투표가 ${v.splitCount}건 있었어요.`;
+          case 'unanimous:ALL_UNANIMOUS': return `투표 ${v.voteCount}건 모두 만장일치였어요.`;
+          case 'unanimous:RECORDED': return '모든 투표가 만장일치였어요.';
+          case 'unanimous:NO_VOTE_DATA': return '투표 결과를 확인할 수 없어요.';
+          case 'reunion:REACHED': return `이번이 함께하는 ${ordinal(v.tripNumber)} 여행이에요.`;
+          case 'reunion:NOT_YET': return `이번이 함께하는 ${ordinal(v.tripNumber)} 여행이에요. ${ordinal(v.target)} 여행에서 달성해요.`;
+          case 'reunion:RECORDED': return '같은 그룹과 다시 여행을 떠났어요.';
+          case 'reunion:NO_HISTORY': return '지난 여행 기록을 불러올 수 없어요.';
+        }
+        if (reason === 'NO_GROUP') return '그룹이 있어야 확인할 수 있어요.';
+        return '';
+      }
+
+      // ---- 알림 대기열 (새로고침해도 유지) ----
+      let pending = [];
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || 'null');
+        if (Array.isArray(saved?.pending)) pending = saved.pending.filter(id => rules.CHALLENGES.some(item => item.id === id));
+      } catch { /* 저장 상태가 없으면 빈 대기열로 시작한다. */ }
+      function savePending() {
+        try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ pending })); }
+        catch { /* 저장 없이도 이번 화면에서는 알림이 유지된다. */ }
+      }
+
+      // ---- 목록 ----
+      const rows = new Map();
+      for (const { id, title } of rules.CHALLENGES) {
+        const row = $('challenge-template').content.firstElementChild.cloneNode(true);
+        row.dataset.challenge = id;
+        row.querySelector('.challenge-title').textContent = title;
+        row.querySelector('.challenge-description').textContent = DESCRIPTION[id];
+        $('challenge-list').append(row);
+        rows.set(id, row);
+      }
+      function renderRow(item) {
+        const row = rows.get(item.id);
+        const achieved = item.status === STATUS.ACHIEVED;
+        row.dataset.status = item.status;
+        row.classList.toggle('is-achieved', achieved);
+        const mark = row.querySelector('.mark');
+        mark.classList.toggle('is-achieved', achieved);
+        mark.querySelector('use').setAttribute('href', achieved ? '#i-check' : item.status === STATUS.UNKNOWN ? '#i-question' : '#i-minus');
+        mark.querySelector('svg').style.visibility = item.status === STATUS.IN_PROGRESS ? 'hidden' : '';
+        row.querySelector('.challenge-detail').textContent = detail(item);
+        row.querySelector('.challenge-state').textContent = STATE_TEXT[item.status];
+        const progress = row.querySelector('.progress');
+        progress.hidden = item.status !== STATUS.IN_PROGRESS || !(item.progress > 0); // 0이면 빈 막대가 정보를 주지 않으므로 숨긴다.
+        if (!progress.hidden) progress.querySelector('.progress-fill').style.setProperty('--progress', String(item.progress));
+      }
+
+      function renderNotice(safe) {
+        const show = safe && pending.length > 0;
+        const notice = $('notice');
+        if (show) {
+          $('notice-list').textContent = rules.CHALLENGES.filter(item => pending.includes(item.id)).map(item => item.title).join(' · ');
+        }
+        notice.hidden = !show;
+        $('main').dataset.noticeShown = String(show);
+      }
+      $('notice-close').addEventListener('click', () => {
+        pending = [];
+        savePending();
+        renderNotice(false);
+      });
+
+      // ---- 그룹 정보 ----
+      function renderGroup(info, vehicles) {
+        $('context-label').setAttribute('aria-hidden', String(!info));
+        $('context-title').textContent = info ? info.name : '';
+        $('context-count').textContent = info ? '차량 ' + info.vehicleCount + '대' : '';
+        $('context-members').textContent = info ? vehicles.map(item => item.displayName).join(' · ') : '';
+      }
+
+      // ---- 현재 경로 패널 (fun-stop-games.html 과 같은 표시 규칙) ----
+      let routeKey = '';
+      async function renderRoute() {
+        const route = await navi.getActiveRoute();
+        const value = M.isAvailable(route) && route.value.stops.length ? route.value : null;
+        const key = JSON.stringify(value);
+        if (key === routeKey) return;
+        routeKey = key;
+        $('route-empty').hidden = Boolean(value);
+        $('route-active').hidden = !value;
+        $('route-owner').hidden = !value;
+        $('route-owner').textContent = value ? value.ownerLabel : '';
+        $('route-source').textContent = value ? value.source : '';
+        const timeline = $('route-timeline');
+        timeline.replaceChildren();
+        if (!value) return;
+        let waypoint = 0;
+        [{ placeName: value.currentLocation }, ...value.stops].forEach((stop, index) => {
+          const point = document.createElement('li');
+          point.className = 'route-point';
+          if (index === 0) point.setAttribute('aria-current', 'location');
+          const label = document.createElement('p');
+          label.className = 'route-point-label';
+          label.textContent = index === 0 ? '현재 위치' : stop.stopKind === 'DESTINATION' ? '목적지' : '경유지 ' + ++waypoint;
+          const title = document.createElement('p');
+          title.className = 'route-point-name';
+          title.textContent = stop.placeName;
+          point.append(label, title);
+          timeline.append(point);
+        });
+      }
+
+      // ---- 판정과 기록 ----
+      let seq = 0;
+      async function refresh() {
+        const id = ++seq;
+        const [motion, drivingSeconds, lastRestSeconds, efficiency, info, vehicles, record, tripNumber, safe] = await Promise.all([
+          vehicle.getMotionState(), vehicle.getContinuousDrivingSeconds(), vehicle.getLastRestSeconds(), vehicle.getFuelEfficiency(),
+          group.getGroup(), group.getGroupVehicles(), tripLog.getTripRecord(), tripLog.getTripNumberWithGroup(), safety.isSafeToPlay()
+        ]);
+        if (id !== seq) return;
+        const results = rules.evaluateAll({
+          rest: { motion, drivingSeconds, lastRestSeconds },
+          efficiency,
+          merge: { group: info, vehicles },
+          unanimous: { decisions: record.decisions, ended: record.endedAt != null },
+          reunion: { group: info, tripNumber }
+        }, record.achievements.map(item => item.challengeId));
+        // 새로 달성한 과제는 바로 기록하고(여행 카드용), 알림은 안전할 때까지 미룬다.
+        for (const item of results) {
+          if (item.status === STATUS.ACHIEVED && !item.recorded && tripLog.recordAchievement({ challengeId: item.id, title: item.title })) {
+            if (!pending.includes(item.id)) pending.push(item.id);
+            savePending();
+          }
+        }
+        results.forEach(renderRow);
+        const achieved = results.filter(item => item.status === STATUS.ACHIEVED).length;
+        const summary = $('summary');
+        const strong = document.createElement('strong');
+        strong.textContent = achieved + '개';
+        summary.replaceChildren('함께 ', strong, ` 달성했어요 · 전체 ${results.length}개`);
+        renderGroup(info, vehicles);
+        renderNotice(safe);
+      }
+
+      vehicle.subscribe(refresh);
+      group.subscribe(refresh);
+      tripLog.subscribe(refresh);
+      safety.subscribe(refresh);
+      navi.subscribe(renderRoute);
+      Promise.all([refresh(), renderRoute()]).then(() => { document.documentElement.dataset.ready = 'true'; });
+    })();
+  </script>
+</body>
+</html>

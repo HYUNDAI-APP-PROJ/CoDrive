@@ -11,8 +11,8 @@
   const MIN = 60, HOUR = 3600;
 
   const PLACES = Object.freeze({
-    rest: Object.freeze({ placeId: 'mock-rest-hoengseong', placeName: '횡성휴게소', stopKind: 'WAYPOINT' }),
-    destination: Object.freeze({ placeId: 'mock-dest-anmok', placeName: '안목해변', stopKind: 'DESTINATION' })
+    rest: Object.freeze({ placeId: 'mock-rest-hoengseong', placeName: '횡성휴게소', stopKind: 'WAYPOINT', placeCategory: 'REST_AREA' }),
+    destination: Object.freeze({ placeId: 'mock-dest-anmok', placeName: '안목해변', stopKind: 'DESTINATION', placeCategory: 'ATTRACTION' })
   });
 
   // 각 시나리오는 "시나리오를 고른 순간"의 상태다. 이후 시간이 흐르면 유지 시간·주행 시간이 늘어난다.
@@ -36,12 +36,12 @@
       arrivals: { 'vehicle-a': null, 'vehicle-b': null, 'vehicle-c': null }
     },
     'rest-stop': {
-      label: '휴게소 도착 (일부 차량)', motion: 'STOPPED', motionHeld: 10, driving: 2 * HOUR + 10 * MIN, lastRest: 10,
+      label: '휴게소 도착 (일부 차량)', motion: 'STOPPED', motionHeld: 10, driving: 1 * HOUR + 50 * MIN, lastRest: 10,
       efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
       arrivals: { 'vehicle-a': { place: 'rest', ago: 10 }, 'vehicle-b': { place: 'rest', ago: 95 }, 'vehicle-c': null }
     },
     'all-arrived': {
-      label: '휴게소 전원 합류', motion: 'STOPPED', motionHeld: 16 * MIN, driving: 2 * HOUR + 10 * MIN, lastRest: 16 * MIN,
+      label: '휴게소 전원 합류', motion: 'STOPPED', motionHeld: 16 * MIN, driving: 1 * HOUR + 50 * MIN, lastRest: 16 * MIN,
       efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
       arrivals: { 'vehicle-a': { place: 'rest', ago: 16 * MIN }, 'vehicle-b': { place: 'rest', ago: 17 * MIN }, 'vehicle-c': { place: 'rest', ago: 4 * MIN } }
     },
@@ -117,6 +117,16 @@
     emit();
   }
 
+  // 시연용: 연속 주행 시간을 지정한 값으로 바꾼다. 주행 중이면 이 값부터 다시 늘어난다. 시나리오를 바꾸면 해제된다.
+  function setDrivingSecondsForDemo(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) throw new RangeError('Invalid driving seconds: ' + seconds);
+    if (SCENARIOS[state.name].driving == null) return false; // 차량 정보가 없는 시나리오에서는 바꾸지 않는다.
+    state = { ...state, driving: { seconds, at: now() } };
+    save();
+    emit();
+    return true;
+  }
+
   // 남은 안내 경로. 이미 지난 지점은 넣지 않는다(design-guide 현재 경로 패널 규칙).
   // 휴게소로 가는 중이면 휴게소 → 목적지, 휴게소에 도착했으면 목적지만, 목적지에 도착했으면 남은 경로 없음.
   function routeFor(navi, place) {
@@ -149,7 +159,9 @@
         vehicleId: GROUP.myVehicleId, displayName: 'A 차량', powertrain: 'ICE',
         motion: known ? s.motion : null,
         motionHeldSeconds: known ? s.motionHeld + elapsed : null,
-        drivingSeconds: s.driving == null ? null : s.driving + (moving ? elapsed : 0),
+        drivingSeconds: s.driving == null ? null : state.driving
+          ? state.driving.seconds + (moving ? Math.max(0, (at - state.driving.at) / 1000) : 0)
+          : s.driving + (moving ? elapsed : 0),
         lastRestSeconds: s.lastRest == null ? null : s.lastRest + (stopped ? elapsed : 0),
         fuelEfficiency: s.efficiency,
         ratedFuelEfficiency: known ? RATED_EFFICIENCY : null
@@ -170,6 +182,7 @@
             arrived: !!arrival,
             placeId: arrivedPlace?.placeId ?? null,
             placeName: arrivedPlace?.placeName ?? null,
+            placeCategory: arrivedPlace?.placeCategory ?? null,
             arrivedAt: arrival ? Math.round(at - (arrival.ago + elapsed) * 1000) : null
           };
         })
@@ -178,7 +191,7 @@
   }
 
   window.CoDriveMock = Object.freeze({
-    now, read, onChange, setScenario,
+    now, read, onChange, setScenario, setDrivingSecondsForDemo,
     scenario: () => state.name,
     scenarios: () => Object.entries(SCENARIOS).map(([name, s]) => ({ name, label: s.label })),
     // 검사 스크립트 전용: 시계를 고정·이동한다. 화면 코드에서 호출하지 않는다.

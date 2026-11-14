@@ -47,6 +47,7 @@
    * value: { source: '내비게이션 경로', ownerLabel: '개인'|그룹 별칭, currentLocation,
    *          stops: [{ stopKind: 'WAYPOINT'|'DESTINATION', placeId, placeName }] }
    * stops 가 비어 있으면 안내 중인 경로가 없는 것이다. 정보를 알 수 없으면 Measurement NO_DATA.
+   * 교체 예정: 나중에 Pleos NaviHelper 의 getRouteStateInfo 결과로 바꿀 자리다. 반환 형식은 유지한다.
    */
   async function getActiveRoute() {
     const raw = readRaw();

@@ -2,7 +2,8 @@
 // 현재는 시연용 초기 기록(방문 장소·그룹 결정)에 이 탭에서 추가한 기록을 합쳐 sessionStorage 에 보관한다.
 // 나중에 history 도메인 저장소로 교체하며, 다른 도메인(group 투표 등)의 결정도 그쪽에서 합쳐진다.
 //
-// 기록하는 것: 방문 장소(시간순), 함께 내린 결정, 달성한 도전과제, 여행 시작·종료 시각.
+// 기록하는 것: 방문 장소(시간순), 함께 내린 결정, 달성한 도전과제, 여행 시작·종료 시각, 같은 그룹과의 여행 횟수.
+// 투표(VOTE) 결정은 찬성 수 votes { agree, total } 를 함께 남긴다. 만장일치 도전과제 판정에 사용한다.
 // 기록하지 않는 것: 차량별 속도·도착 순서·주행 거리 비교.
 (() => {
   'use strict';
@@ -16,12 +17,13 @@
     const startedAt = at - 3 * 60 * MIN;
     return {
       tripId: 'mock-trip-gangneung', groupName: '강릉 주말 여행', startedAt, endedAt: null,
+      tripNumberWithGroup: 3, // 이번 여행이 같은 그룹과의 몇 번째 여행인지 (history 저장소 연결 시 실제 기록으로 계산)
       visits: [
         { placeId: 'mock-place-lake-walk', placeName: '대청호 산책로', arrivedAt: startedAt + 25 * MIN, leftAt: startedAt + 70 * MIN },
         { placeId: 'mock-place-lake-restaurant', placeName: '호숫가 식당', arrivedAt: startedAt + 80 * MIN, leftAt: startedAt + 130 * MIN }
       ],
       decisions: [
-        { id: 'mock-decision-lunch', kind: DECISION_KIND.VOTE, title: '점심 장소', result: '호숫가 식당', decidedAt: startedAt + 60 * MIN }
+        { id: 'mock-decision-lunch', kind: DECISION_KIND.VOTE, title: '점심 장소', result: '호숫가 식당', votes: { agree: 3, total: 3 }, decidedAt: startedAt + 60 * MIN }
       ],
       achievements: []
     };
@@ -64,11 +66,17 @@
     });
   }
 
-  /** 룰렛·사다리 등으로 함께 내린 결정을 기록한다. 결과가 확정된 뒤에만 호출한다. */
-  function recordDecision({ kind, title, result }) {
+  /**
+   * 룰렛·사다리·투표로 함께 내린 결정을 기록한다. 결과가 확정된 뒤에만 호출한다.
+   * 투표(VOTE)는 votes { agree, total } 를 함께 넘긴다. 찬성 수를 모르면 생략하며, 이때 만장일치 여부는 확인할 수 없음으로 판정된다.
+   */
+  function recordDecision({ kind, title, result, votes }) {
     if (!Object.hasOwn(DECISION_KIND, kind)) throw new RangeError('Unknown decision kind: ' + kind);
+    if (votes !== undefined && (kind !== DECISION_KIND.VOTE || !Number.isInteger(votes?.agree) || !Number.isInteger(votes?.total)
+      || votes.total < 1 || votes.agree < 0 || votes.agree > votes.total)) throw new RangeError('Invalid votes');
     const at = now();
     const entry = { id: 'decision-' + at + '-' + log.decisions.length, kind, title: text(title, 'title'), result: text(result, 'result'), decidedAt: at };
+    if (votes) entry.votes = { agree: votes.agree, total: votes.total };
     log.decisions.push(entry);
     save(); emit();
     return Object.freeze({ ...entry });
@@ -83,6 +91,17 @@
     return true;
   }
 
+  /**
+   * 이번 여행이 같은 그룹과의 몇 번째 여행인지 (이번 여행 포함). Measurement 형식.
+   * 기록을 불러오지 못했거나 값이 없으면 NO_DATA.
+   */
+  async function getTripNumberWithGroup() {
+    const M = window.CoDriveMeasurement;
+    const value = log.tripNumberWithGroup;
+    if (!M) throw new Error('trip-log.js 보다 measurement.js 를 먼저 불러와야 합니다.');
+    return Number.isInteger(value) && value >= 1 ? M.mock(value, now()) : M.missing(M.QUALITY.NO_DATA);
+  }
+
   /** 여행을 종료한다. 이후 함께한 시간이 더 늘지 않는다. 이미 종료했으면 false. */
   function endTrip() {
     if (log.endedAt != null) return false;
@@ -95,7 +114,7 @@
   function subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); }
 
   window.CoDriveTripLog = Object.freeze({
-    DECISION_KIND, getTripRecord, recordDecision, recordAchievement, endTrip, subscribe,
+    DECISION_KIND, getTripRecord, getTripNumberWithGroup, recordDecision, recordAchievement, endTrip, subscribe,
     // 시연·검사용: 초기 기록으로 되돌린다.
     resetForDemo() { log = seed(now()); save(); emit(); }
   });
