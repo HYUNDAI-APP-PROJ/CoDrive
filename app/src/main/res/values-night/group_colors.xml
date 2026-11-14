@@ -1,0 +1,8 @@
+<resources>
+<color name="group_background">#141414</color><color name="group_surface">#202122</color>
+<color name="group_field">#2B2C2E</color><color name="group_ink">#F4F1EA</color>
+<color name="group_muted">#B7B3AA</color><color name="group_line">#494A4C</color>
+<color name="group_on_accent">#202122</color><color name="group_hero">#101112</color>
+<color name="group_hero_muted">#B8B9BD</color><color name="group_error">#FFB4AB</color>
+<color name="group_disabled">#686764</color>
+</resources>
