@@ -227,9 +227,10 @@
       const minutesLeft = seconds => Math.max(1, Math.ceil(seconds / 60)) + '분';
       const LIMIT = duration(RULES.REST_MAX_DRIVING_SECONDS), REST = duration(RULES.REST_MIN_SECONDS);
       const TARGET = Math.round(RULES.EFFICIENCY_TARGET_RATIO * 100) + '%';
+      const MIN_KM = RULES.EFFICIENCY_MIN_DISTANCE_KM + 'km';
       const DESCRIPTION = {
         'rest-before-2h': `연속 운전 ${LIMIT}이 되기 전에 ${REST} 이상 쉬어가요. 한국도로공사 권장 기준이에요.`,
-        'smooth-driving': `공인 연비의 ${TARGET} 이상으로 달려요. 전기차는 공인 전비로 봐요.`,
+        'smooth-driving': `${MIN_KM} 이상 달리고 공인 연비의 ${TARGET} 이상이면 달성해요. 전기차는 공인 전비로 봐요.`,
         'perfect-merge': '그룹 차량이 모두 같은 휴게소에 모여요.',
         unanimous: '여행 중 모든 투표를 만장일치로 정해요.',
         reunion: `같은 그룹과 ${ordinal(RULES.REUNION_TRIP_NUMBER)} 여행을 떠나요.`
@@ -247,6 +248,7 @@
             const text = `공인 ${word} ${v.rated}${v.unit} 대비 ${Math.round(v.ratio * 100)}%`;
             return reason === 'BELOW_TARGET' ? text + ` · 목표 ${TARGET}` : text;
           }
+          case 'smooth-driving:TOO_SHORT': return `${MIN_KM} 이상 달린 뒤 판정해요 · 지금 ${Math.floor(v.distanceKm)}km`;
           case 'smooth-driving:RECORDED': return `공인 연비 대비 ${TARGET}를 넘겼어요.`;
           case 'smooth-driving:NO_VEHICLE_DATA': return '연비 정보를 받을 수 없어요.';
           case 'perfect-merge:ALL_TOGETHER': return `${v.placeName}에 모두 모였어요.`;
@@ -261,7 +263,8 @@
           case 'unanimous:RECORDED': return '모든 투표가 만장일치였어요.';
           case 'unanimous:NO_VOTE_DATA': return '투표 결과를 확인할 수 없어요.';
           case 'reunion:REACHED': return `이번이 함께하는 ${ordinal(v.tripNumber)} 여행이에요.`;
-          case 'reunion:NOT_YET': return `이번이 함께하는 ${ordinal(v.tripNumber)} 여행이에요. ${ordinal(v.target)} 여행에서 달성해요.`;
+          case 'reunion:NOT_YET': return `이번이 함께하는 ${ordinal(v.tripNumber)} 여행이에요. `
+            + (v.target - v.tripNumber === 1 ? '다음 여행이면 달성해요.' : `${ordinal(v.target)} 여행에서 달성해요.`);
           case 'reunion:RECORDED': return '같은 그룹과 다시 여행을 떠났어요.';
           case 'reunion:NO_HISTORY': return '지난 여행 기록을 불러올 수 없어요.';
         }
@@ -365,14 +368,14 @@
       let seq = 0;
       async function refresh() {
         const id = ++seq;
-        const [motion, drivingSeconds, lastRestSeconds, efficiency, info, vehicles, record, tripNumber, safe] = await Promise.all([
-          vehicle.getMotionState(), vehicle.getContinuousDrivingSeconds(), vehicle.getLastRestSeconds(), vehicle.getFuelEfficiency(),
+        const [motion, drivingSeconds, lastRestSeconds, efficiency, tripDistance, info, vehicles, record, tripNumber, safe] = await Promise.all([
+          vehicle.getMotionState(), vehicle.getContinuousDrivingSeconds(), vehicle.getLastRestSeconds(), vehicle.getFuelEfficiency(), vehicle.getTripDistance(),
           group.getGroup(), group.getGroupVehicles(), tripLog.getTripRecord(), tripLog.getTripNumberWithGroup(), safety.isSafeToPlay()
         ]);
         if (id !== seq) return;
         const results = rules.evaluateAll({
           rest: { motion, drivingSeconds, lastRestSeconds },
-          efficiency,
+          efficiency: { ...efficiency, tripDistance },
           merge: { group: info, vehicles },
           unanimous: { decisions: record.decisions, ended: record.endedAt != null },
           reunion: { group: info, tripNumber }

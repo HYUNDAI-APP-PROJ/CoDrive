@@ -18,46 +18,47 @@
   // 각 시나리오는 "시나리오를 고른 순간"의 상태다. 이후 시간이 흐르면 유지 시간·주행 시간이 늘어난다.
   // motionHeld: 현재 motion이 이미 유지된 초, driving: 마지막 휴식 이후 연속 주행 초,
   // lastRest: 가장 최근 정차 길이(정차 중이면 현재 정차가 계속 늘어남),
+  // distance: 이번 여행 주행 거리(km, 주행 중에는 DEMO_SPEED_KMH 로 늘어남). 연비 과제 최소 거리(20km) 이상으로 둔다.
   // arrivals: 그룹 차량별 도착 장소 키(null이면 미도착)와 도착 후 경과 초.
   const SCENARIOS = Object.freeze({
     driving: {
       label: '주행 중', motion: 'MOVING', motionHeld: 40 * MIN, driving: 1 * HOUR + 55 * MIN, lastRest: 6 * MIN,
-      efficiency: 14.2, navi: { navigation: 'GUIDING', place: 'rest' },
+      distance: 142, efficiency: 14.2, navi: { navigation: 'GUIDING', place: 'rest' },
       arrivals: { 'vehicle-a': null, 'vehicle-b': null, 'vehicle-c': null }
     },
     'red-light': {
       label: '신호 대기 (정차 직후)', motion: 'STOPPED', motionHeld: 0, driving: 1 * HOUR + 20 * MIN, lastRest: 0,
-      efficiency: 13.1, navi: { navigation: 'GUIDING', place: 'rest' },
+      distance: 96, efficiency: 13.1, navi: { navigation: 'GUIDING', place: 'rest' },
       arrivals: { 'vehicle-a': null, 'vehicle-b': null, 'vehicle-c': null }
     },
     'long-stop': {
       label: '2분 넘게 정차', motion: 'STOPPED', motionHeld: 150, driving: 1 * HOUR + 20 * MIN, lastRest: 150,
-      efficiency: 13.1, navi: { navigation: 'GUIDING', place: 'rest' },
+      distance: 96, efficiency: 13.1, navi: { navigation: 'GUIDING', place: 'rest' },
       arrivals: { 'vehicle-a': null, 'vehicle-b': null, 'vehicle-c': null }
     },
     'rest-stop': {
       label: '휴게소 도착 (일부 차량)', motion: 'STOPPED', motionHeld: 10, driving: 1 * HOUR + 50 * MIN, lastRest: 10,
-      efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
+      distance: 128, efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
       arrivals: { 'vehicle-a': { place: 'rest', ago: 10 }, 'vehicle-b': { place: 'rest', ago: 95 }, 'vehicle-c': null }
     },
     'all-arrived': {
       label: '휴게소 전원 합류', motion: 'STOPPED', motionHeld: 16 * MIN, driving: 1 * HOUR + 50 * MIN, lastRest: 16 * MIN,
-      efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
+      distance: 128, efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
       arrivals: { 'vehicle-a': { place: 'rest', ago: 16 * MIN }, 'vehicle-b': { place: 'rest', ago: 17 * MIN }, 'vehicle-c': { place: 'rest', ago: 4 * MIN } }
     },
     'leaving-rest-stop': {
       label: '휴게소 출발 (도착 표시 남음)', motion: 'MOVING', motionHeld: 5, driving: 5, lastRest: 18 * MIN,
-      efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
+      distance: 129, efficiency: 14.0, navi: { navigation: 'ARRIVED', place: 'rest' },
       arrivals: { 'vehicle-a': { place: 'rest', ago: 19 * MIN }, 'vehicle-b': { place: 'rest', ago: 20 * MIN }, 'vehicle-c': { place: 'rest', ago: 7 * MIN } }
     },
     destination: {
       label: '목적지 도착', motion: 'STOPPED', motionHeld: 5, driving: 1 * HOUR + 30 * MIN, lastRest: 5,
-      efficiency: 13.6, navi: { navigation: 'ARRIVED', place: 'destination' },
+      distance: 215, efficiency: 13.6, navi: { navigation: 'ARRIVED', place: 'destination' },
       arrivals: { 'vehicle-a': { place: 'destination', ago: 5 }, 'vehicle-b': { place: 'destination', ago: 60 }, 'vehicle-c': null }
     },
     unknown: {
       label: '차량 정보 없음', motion: 'UNKNOWN', motionHeld: null, driving: null, lastRest: null,
-      efficiency: null, navi: null,
+      distance: null, efficiency: null, navi: null,
       arrivals: { 'vehicle-a': null, 'vehicle-b': null, 'vehicle-c': null }
     }
   });
@@ -73,6 +74,7 @@
     ])
   });
   const CURRENT_LOCATION_ON_ROAD = '원주 부근'; // 휴게소로 가는 도중의 현재 위치 표시
+  const DEMO_SPEED_KMH = 80; // 주행 중 거리 증가 속도(시연용)
   const RATED_EFFICIENCY = 12.8; // 시연 차량의 공인 복합 연비(km/L)
 
   let testNow = null;
@@ -163,6 +165,7 @@
           ? state.driving.seconds + (moving ? Math.max(0, (at - state.driving.at) / 1000) : 0)
           : s.driving + (moving ? elapsed : 0),
         lastRestSeconds: s.lastRest == null ? null : s.lastRest + (stopped ? elapsed : 0),
+        tripDistance: s.distance == null ? null : s.distance + (moving ? elapsed * DEMO_SPEED_KMH / 3600 : 0),
         fuelEfficiency: s.efficiency,
         ratedFuelEfficiency: known ? RATED_EFFICIENCY : null
       },

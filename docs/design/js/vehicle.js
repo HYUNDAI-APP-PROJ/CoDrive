@@ -5,6 +5,7 @@
 // 필드명은 vehicle-status-ui 브랜치의 com.codrive.convoy.data.model.VehicleStatus 를 따른다.
 //   motion          → Measurement<Motion>  (MOVING · STOPPED · UNKNOWN)
 //   drivingSeconds  → Measurement<Double>
+//   tripDistance    → Measurement<Double>  (이번 여행 주행 거리. km 단위로 가정 — fun-pending-decisions.md 참고)
 //   powertrain      → EV · ICE · HEV · PHEV · UNKNOWN
 // 아래는 현재 모델에 없는 "추가 예정 필드"다. 모델에 추가되면 같은 이름으로 연결한다.
 //   [추가 예정] motionHeldSeconds   현재 motion 값이 유지된 시간(초)
@@ -65,6 +66,12 @@
     return quantity(raw.vehicle.drivingSeconds, raw.observedAt);
   }
 
+  /** 이번 여행 주행 거리(km). 모델 필드 tripDistance 를 사용한다. 연비 과제의 최소 거리 판정에 쓴다. */
+  async function getTripDistance() {
+    const raw = readRaw();
+    return quantity(raw.vehicle.tripDistance, raw.observedAt);
+  }
+
   /** [추가 예정 필드 lastRestSeconds] 가장 최근 정차 길이(초). 정차 중이면 지금까지의 정차 시간이다. */
   async function getLastRestSeconds() {
     const raw = readRaw();
@@ -94,6 +101,6 @@
   function subscribe(callback) { return subscribeRaw(callback); }
 
   window.CoDriveVehicle = Object.freeze({
-    MOTION, getMotionState, getMotionHeldSeconds, getContinuousDrivingSeconds, getLastRestSeconds, getFuelEfficiency, subscribe
+    MOTION, getMotionState, getMotionHeldSeconds, getContinuousDrivingSeconds, getTripDistance, getLastRestSeconds, getFuelEfficiency, subscribe
   });
 })();

@@ -59,6 +59,7 @@ function at(window, scenario, t0 = 1_800_000_000_000) {
   const drivingBefore = (await vehicle.getContinuousDrivingSeconds()).value;
   tick(300);
   assert.equal((await vehicle.getContinuousDrivingSeconds()).value, drivingBefore + 300, '주행 중에는 연속 주행 시간이 늘어난다');
+  assert.ok((await vehicle.getTripDistance()).value >= 20, '시연 주행 거리는 연비 과제 최소 거리 이상');
   const efficiency = await vehicle.getFuelEfficiency();
   assert.equal(efficiency.unit, 'km/L');
   assert.ok(M.isAvailable(efficiency.current) && M.isAvailable(efficiency.rated));
@@ -98,6 +99,17 @@ function at(window, scenario, t0 = 1_800_000_000_000) {
   assert.deepEqual({ ...(await safety.getPlaySafety()) }, { safe: false, reason: 'UNKNOWN', waitSeconds: null });
   assert.equal((await navi.getArrivalState()).quality, 'NO_DATA');
   assert.equal((await vehicle.getFuelEfficiency()).current.quality, 'NO_DATA');
+  assert.equal((await vehicle.getTripDistance()).quality, 'NO_DATA');
+
+  // 시연 시나리오의 주행 거리는 모두 연비 과제 최소 거리(20km) 이상이다. 주행 중에는 늘어난다.
+  for (const { name } of mock.scenarios().filter(item => item.name !== 'unknown')) {
+    at(window, name);
+    assert.ok((await vehicle.getTripDistance()).value >= 20, name + ' 주행 거리');
+  }
+  tick = at(window, 'driving');
+  const distanceBefore = (await vehicle.getTripDistance()).value;
+  tick(3600);
+  assert.equal(Math.round((await vehicle.getTripDistance()).value - distanceBefore), 80);
 
   // 그룹 차량 목록과 도착 여부: 내 차량이 맨 앞.
   assert.deepEqual({ ...(await group.getGroup()) }, { groupId: 'mock-gangneung', name: '강릉 주말 여행', vehicleCount: 3 });
@@ -133,6 +145,13 @@ function at(window, scenario, t0 = 1_800_000_000_000) {
   assert.equal(boot({ search: '?scenario=nope' }).window.CoDriveMock.scenario(), 'driving');
 
   // 여행 기록: 시간순, 결정 추가, 도전과제 중복 방지, 종료 후 함께한 시간 고정, 새로고침 복원.
+  // ?trip=N 으로 같은 그룹 여행 횟수를 바꾸고, 새로고침해도 유지된다. 범위 밖이면 기본값 3.
+  const secondTrip = boot({ search: '?trip=2' });
+  assert.equal((await secondTrip.window.CoDriveTripLog.getTripNumberWithGroup()).value, 2);
+  assert.equal((await boot({ search: '?trip=2', storage: secondTrip.storage }).window.CoDriveTripLog.getTripNumberWithGroup()).value, 2);
+  assert.equal((await boot({ search: '?trip=1', storage: secondTrip.storage }).window.CoDriveTripLog.getTripNumberWithGroup()).value, 1);
+  assert.equal((await boot({ search: '?trip=99' }).window.CoDriveTripLog.getTripNumberWithGroup()).value, 3);
+
   const tripTab = boot();
   const log = tripTab.window.CoDriveTripLog;
   const tripMock = tripTab.window.CoDriveMock;

@@ -158,6 +158,36 @@ const noRanking = async (page, label) => {
       await dev.close();
     }
 
+    // 5-1. 시연 패널의 같은 그룹 여행 횟수: ?trip=N 으로 반영, 새로고침 유지, 2번째는 "다음 여행이면 달성해요"
+    {
+      const page = await open(browser, { scenario: 'driving', search: 'dev=1' });
+      await ready(page);
+      assert.equal((await row(page, 'reunion')).status, 'ACHIEVED');
+      const pressTrip = async n => {
+        const next = page.nextLoad();
+        await page.eval(`(() => { if (document.getElementById('dev-body').hidden) document.querySelector('.dev-toggle').click();
+          document.querySelector('[data-dev-trip="${n}"]').click(); })()`);
+        await next;
+        await page.waitFor('document.documentElement.dataset.ready === "true"');
+        await ready(page);
+      };
+      await pressTrip(2);
+      assert.match(await page.eval('location.search'), /trip=2/);
+      assert.deepEqual(await row(page, 'reunion'), { status: 'IN_PROGRESS', state: '진행 중', detail: '이번이 함께하는 두 번째 여행이에요. 다음 여행이면 달성해요.' });
+      assert.ok(!(await achievements(page)).includes('reunion'), '횟수를 바꾸면 시연 기록을 다시 시작한다');
+      await page.waitFor(`document.querySelector('[data-dev-trip="2"]').getAttribute('aria-pressed') === 'true'`);
+      const next = page.nextLoad();
+      await page.eval('location.reload()');
+      await next;
+      await ready(page);
+      assert.equal((await row(page, 'reunion')).detail, '이번이 함께하는 두 번째 여행이에요. 다음 여행이면 달성해요.', '새로고침해도 유지');
+      await pressTrip(1);
+      assert.equal((await row(page, 'reunion')).detail, '이번이 함께하는 첫 번째 여행이에요. 세 번째 여행에서 달성해요.');
+      await pressTrip(3);
+      assert.equal((await row(page, 'reunion')).status, 'ACHIEVED');
+      await page.close();
+    }
+
     // 6. 두 창 크기에서 겹침·넘침·줄바꿈 없음
     const layouts = [
       ['driving', { scenario: 'driving' }],

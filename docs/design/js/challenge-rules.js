@@ -12,6 +12,7 @@
     REST_MAX_DRIVING_SECONDS: 2 * 3600, // 한국도로공사 권장: 2시간 운전하면
     REST_MIN_SECONDS: 15 * 60,          // 15분 이상 휴식
     EFFICIENCY_TARGET_RATIO: 1.05,      // 공인 연비(전비)의 105% 이상
+    EFFICIENCY_MIN_DISTANCE_KM: 20,     // 이 거리 이상 달린 뒤에 판정 (출발 직후의 들쭉날쭉한 연비 제외)
     REUNION_TRIP_NUMBER: 3              // 같은 그룹과 세 번째 여행
   });
 
@@ -53,11 +54,17 @@
   }
 
   /**
-   * 부드러운 운전: 내 차량의 현재 연비(전기차는 전비)가 공인 값의 목표 비율 이상.
-   * 입력: { current, rated, unit } — vehicle.getFuelEfficiency() 결과. 다른 차량 값은 받지 않는다.
+   * 부드러운 운전: 최소 거리 이상 달린 뒤, 내 차량의 현재 연비(전기차는 전비)가 공인 값의 목표 비율 이상.
+   * 입력: { current, rated, unit } — vehicle.getFuelEfficiency() 결과, tripDistance — vehicle.getTripDistance() 결과(km).
+   * 다른 차량 값은 받지 않는다. 거리가 기준 미만이면 연비와 관계없이 진행 중이다.
    */
-  function evaluateEfficiency({ current, rated, unit }) {
-    if (!usable(current) || !usable(rated) || !(rated.value > 0) || !unit) return result(STATUS.UNKNOWN, 'NO_VEHICLE_DATA');
+  function evaluateEfficiency({ current, rated, unit, tripDistance }) {
+    if (!usable(current) || !usable(rated) || !(rated.value > 0) || !unit || !usable(tripDistance)) return result(STATUS.UNKNOWN, 'NO_VEHICLE_DATA');
+    const distanceKm = tripDistance.value;
+    if (distanceKm < RULES.EFFICIENCY_MIN_DISTANCE_KM) {
+      return result(STATUS.IN_PROGRESS, 'TOO_SHORT', clamp(distanceKm / RULES.EFFICIENCY_MIN_DISTANCE_KM),
+        { distanceKm, minDistanceKm: RULES.EFFICIENCY_MIN_DISTANCE_KM, unit, electric: unit === 'km/kWh' });
+    }
     const ratio = current.value / rated.value;
     const values = { ratio, current: current.value, rated: rated.value, unit, electric: unit === 'km/kWh' };
     if (ratio >= RULES.EFFICIENCY_TARGET_RATIO) return result(STATUS.ACHIEVED, 'ABOVE_TARGET', 1, values);

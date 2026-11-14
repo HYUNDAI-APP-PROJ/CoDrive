@@ -26,7 +26,7 @@ const check = (actual, status, reason) => {
 };
 
 // 기준값은 한 곳의 상수다.
-assert.deepEqual(plain(RULES), { REST_MAX_DRIVING_SECONDS: 7200, REST_MIN_SECONDS: 900, EFFICIENCY_TARGET_RATIO: 1.05, REUNION_TRIP_NUMBER: 3 });
+assert.deepEqual(plain(RULES), { REST_MAX_DRIVING_SECONDS: 7200, REST_MIN_SECONDS: 900, EFFICIENCY_TARGET_RATIO: 1.05, EFFICIENCY_MIN_DISTANCE_KM: 20, REUNION_TRIP_NUMBER: 3 });
 
 // 1. 쉬어가는 여행
 check(R.evaluateRest({ motion: ok('STOPPED'), drivingSeconds: ok(1 * HOUR + 50 * MIN), lastRestSeconds: ok(15 * MIN) }), S.ACHIEVED, 'RESTED');
@@ -44,20 +44,30 @@ check(R.evaluateRest({ motion: ok('MOVING'), drivingSeconds: missing('NO_DATA'),
 check(R.evaluateRest({}), S.UNKNOWN);
 
 // 2. 부드러운 운전 (내 차량 · 공인 대비만)
-check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L' }), S.ACHIEVED, 'ABOVE_TARGET');
-check(R.evaluateEfficiency({ current: ok(12.8 * 1.05), rated: ok(12.8), unit: 'km/L' }), S.ACHIEVED);
-const below = R.evaluateEfficiency({ current: ok(13.1), rated: ok(12.8), unit: 'km/L' });
+check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) }), S.ACHIEVED, 'ABOVE_TARGET');
+check(R.evaluateEfficiency({ current: ok(12.8 * 1.05), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) }), S.ACHIEVED);
+const below = R.evaluateEfficiency({ current: ok(13.1), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) });
 check(below, S.IN_PROGRESS, 'BELOW_TARGET');
 assert.ok(below.progress > 0.95 && below.progress < 1);
-const electric = R.evaluateEfficiency({ current: ok(6.0), rated: ok(5.2), unit: 'km/kWh' });
+const electric = R.evaluateEfficiency({ current: ok(6.0), rated: ok(5.2), unit: 'km/kWh', tripDistance: ok(50) });
 check(electric, S.ACHIEVED);
 assert.equal(electric.values.electric, true);
-check(R.evaluateEfficiency({ current: ok(4.9), rated: ok(5.2), unit: 'km/kWh' }), S.IN_PROGRESS);
-check(R.evaluateEfficiency({ current: missing('NO_DATA'), rated: ok(12.8), unit: 'km/L' }), S.UNKNOWN);
-check(R.evaluateEfficiency({ current: stale(20), rated: ok(12.8), unit: 'km/L' }), S.UNKNOWN);
-check(R.evaluateEfficiency({ current: ok(14), rated: ok(0), unit: 'km/L' }), S.UNKNOWN);
-check(R.evaluateEfficiency({ current: ok(14), rated: ok(12.8), unit: null }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: ok(4.9), rated: ok(5.2), unit: 'km/kWh', tripDistance: ok(50) }), S.IN_PROGRESS);
+check(R.evaluateEfficiency({ current: missing('NO_DATA'), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: stale(20), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: ok(14), rated: ok(0), unit: 'km/L', tripDistance: ok(50) }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: ok(14), rated: ok(12.8), unit: null, tripDistance: ok(50) }), S.UNKNOWN);
 assert.deepEqual(Object.keys(below.values).sort(), ['current', 'electric', 'rated', 'ratio', 'unit']); // 다른 차량 값 없음
+// 최소 거리(20km) 미만이면 연비가 높아도 진행 중. 정확히 20km부터 판정. 거리를 모르면 확인할 수 없음.
+const short = R.evaluateEfficiency({ current: ok(20), rated: ok(12.8), unit: 'km/L', tripDistance: ok(19.9) });
+check(short, S.IN_PROGRESS, 'TOO_SHORT');
+assert.equal(short.values.distanceKm, 19.9);
+assert.ok(Math.abs(short.progress - 19.9 / 20) < 1e-9);
+check(R.evaluateEfficiency({ current: ok(5), rated: ok(12.8), unit: 'km/L', tripDistance: ok(3) }), S.IN_PROGRESS, 'TOO_SHORT');
+check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L', tripDistance: ok(20) }), S.ACHIEVED, 'ABOVE_TARGET');
+check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L', tripDistance: missing('NO_DATA') }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L', tripDistance: stale(80) }), S.UNKNOWN);
+check(R.evaluateEfficiency({ current: ok(14.2), rated: ok(12.8), unit: 'km/L' }), S.UNKNOWN);
 
 // 3. 완벽한 합류
 const group = { groupId: 'g', name: '강릉 주말 여행', vehicleCount: 3 };
@@ -100,7 +110,7 @@ check(R.evaluateReunion({ group: null, tripNumber: ok(3) }), S.UNKNOWN, 'NO_GROU
 // 전체 판정: 기록된 달성은 지금 값이 바뀌어도 유지된다. 기록되지 않은 과제는 지금 값대로.
 const all = R.evaluateAll({
   rest: { motion: ok('MOVING'), drivingSeconds: ok(10), lastRestSeconds: ok(20 * MIN) },
-  efficiency: { current: missing('STALE'), rated: ok(12.8), unit: 'km/L' },
+  efficiency: { current: missing('STALE'), rated: ok(12.8), unit: 'km/L', tripDistance: ok(50) },
   merge: { group, vehicles: [at_('r1'), away, away] },
   unanimous: { decisions: [vote(3, 3)], ended: false },
   reunion: { group, tripNumber: ok(3) }
@@ -127,6 +137,6 @@ for (const search of ['', '?scenario=driving', '?dev=0', '?dev=true']) {
   assert.deepEqual(touched, [], search);
 }
 
-console.log('PASS: rest (achieved · resting · driving · over 2h · no data), efficiency (target · EV · below · stale), '
+console.log('PASS: rest (achieved · resting · driving · over 2h · no data), efficiency (target · EV · below · stale · under 20km · no distance), '
   + 'merge (all · partial · different rest areas · not a rest area · unknown vehicle · no group), unanimous (ended · so far · split · missing tally), '
   + 'reunion (Nth trip · earlier · no history · no group), recorded achievements kept, dev panel inert without dev=1');

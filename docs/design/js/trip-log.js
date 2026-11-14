@@ -12,12 +12,17 @@
   const now = () => window.CoDriveMock ? window.CoDriveMock.now() : Date.now();
   const DECISION_KIND = Object.freeze({ ROULETTE: 'ROULETTE', LADDER: 'LADDER', VOTE: 'VOTE' });
 
+  // 시연용: 주소의 ?trip=N 으로 같은 그룹과의 여행 횟수를 바꾼다(1~10). 없으면 3.
+  const DEFAULT_TRIP_NUMBER = 3;
+  const requestedTrip = Number(new URLSearchParams(window.location?.search || '').get('trip'));
+  const demoTripNumber = Number.isInteger(requestedTrip) && requestedTrip >= 1 && requestedTrip <= 10 ? requestedTrip : null;
+
   // 시연용 초기 기록. 처음 불러온 시각을 기준으로 상대 시간을 계산해 한 번만 만든다.
   function seed(at) {
     const startedAt = at - 3 * 60 * MIN;
     return {
       tripId: 'mock-trip-gangneung', groupName: '강릉 주말 여행', startedAt, endedAt: null,
-      tripNumberWithGroup: 3, // 이번 여행이 같은 그룹과의 몇 번째 여행인지 (history 저장소 연결 시 실제 기록으로 계산)
+      tripNumberWithGroup: demoTripNumber ?? DEFAULT_TRIP_NUMBER, // 같은 그룹과의 몇 번째 여행인지 (history 저장소 연결 시 실제 기록으로 계산)
       visits: [
         { placeId: 'mock-place-lake-walk', placeName: '대청호 산책로', arrivedAt: startedAt + 25 * MIN, leftAt: startedAt + 70 * MIN },
         { placeId: 'mock-place-lake-restaurant', placeName: '호숫가 식당', arrivedAt: startedAt + 80 * MIN, leftAt: startedAt + 130 * MIN }
@@ -37,6 +42,7 @@
     return seed(now());
   }
   let log = load();
+  if (demoTripNumber !== null) log.tripNumberWithGroup = demoTripNumber; // 주소의 값이 저장 기록보다 우선한다.
   function save() {
     try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(log)); }
     catch { /* 저장 없이도 이번 화면에서는 기록이 유지된다. */ }

@@ -99,6 +99,15 @@ async function open(browser, pageUrl, { scenario, search = '', width = 1682, hei
       const { data } = await send('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(file, Buffer.from(data, 'base64'));
     },
+    // 같은 탭(같은 sessionStorage)에서 다른 화면으로 이동한다. 화면 사이 기록 연결을 확인할 때 쓴다.
+    async goto(url) {
+      const next = browser.once('Page.loadEventFired', sessionId);
+      await send('Page.navigate', { url });
+      await next;
+      await page.waitFor('document.documentElement.dataset.ready === "true"');
+    },
+    // 화면 안의 동작(새로고침 등)으로 다음 페이지가 다 불러와질 때까지 기다릴 약속을 미리 만든다.
+    nextLoad: () => browser.once('Page.loadEventFired', sessionId),
     close: () => browser.send('Target.closeTarget', { targetId })
   };
   await page.waitFor('document.documentElement.dataset.ready === "true"');
