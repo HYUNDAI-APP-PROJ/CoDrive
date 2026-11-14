@@ -1,0 +1,13 @@
+<resources>
+    <color name="convoy_background">#F7F7F7</color>
+    <color name="convoy_surface">#FFFFFF</color>
+    <color name="convoy_ink">#161616</color>
+    <color name="convoy_muted">#656565</color>
+    <color name="convoy_line">#DEDEDE</color>
+    <color name="convoy_own">#161616</color>
+    <color name="convoy_own_ink">#FFFFFF</color>
+    <color name="convoy_own_muted">#C8C8C8</color>
+    <color name="convoy_own_line">#444444</color>
+    <color name="convoy_warning">#8A4A08</color>
+    <color name="convoy_warning_surface">#FFF3E4</color>
+</resources>
