@@ -13,6 +13,7 @@ import java.util.ArrayList;
 /** Android STT 수명과 취소 이후 도착하는 콜백을 관리합니다. 메인 스레드에서 호출합니다. */
 public final class SpeechInputController {
     public interface Listener {
+        default void ready() { }
         void partial(String text);
         void processing();
         void result(String text);
@@ -52,6 +53,7 @@ public final class SpeechInputController {
                 @Override
                 public void onReadyForSpeech(Bundle params) {
                     if (current()) {
+                        listener.ready();
                         handler.removeCallbacks(timeout);
                         handler.postDelayed(timeout, 60000);
                     }

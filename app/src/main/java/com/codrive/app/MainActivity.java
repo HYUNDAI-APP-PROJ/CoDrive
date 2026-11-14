@@ -1,288 +1,168 @@
 package com.codrive.app;
 
-import static android.view.ViewGroup.LayoutParams.*;
-
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
+import android.webkit.*;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.core.view.*;
 import com.codrive.BuildConfig;
 import com.codrive.R;
 import com.codrive.core.speech.SpeechInputController;
-import com.codrive.core.ui.Ui;
-import com.codrive.group.data.repository.MockGroupRepository;
-import com.codrive.group.ui.lobby.GroupCreateScreen;
-import com.codrive.recommendation.ui.RecommendationScreen;
-import com.codrive.recommendation.ui.RecommendationState;
-import com.codrive.recommendation.ui.RecommendationViewModel;
+import org.json.*;
+import java.io.*;
 
-/** 앱 시작점: 도메인 화면, 목업 데이터와 기기 음성 인식을 조립합니다. */
+/** Bundled HTML design with Android speech input and persistent screen checkpoints. */
 public final class MainActivity extends AppCompatActivity {
-    private final MockGroupRepository groups = new MockGroupRepository();
-    private RecommendationState state;
-    private RecommendationScreen screen;
+    private WebView web;
     private SpeechInputController speech;
-    private FrameLayout host;
-    private TextView contextTitle, personal, group;
-    private boolean recording;
-    private boolean awaitingPermission;
-    private final ActivityResultLauncher<String> microphonePermission =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                if (!awaitingPermission)
-                    return;
-                awaitingPermission = false;
-                if (granted)
-                    startSpeech();
-                else if (screen != null)
-                    screen.status("마이크 권한이 필요해요. 텍스트 입력도 사용할 수 있어요.");
+    private int speechId = -1;
+    private boolean permissionPending, loaded;
+    private volatile int viewportWidth;
+    private float density;
+    private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (!permissionPending || speechId < 0) return;
+                permissionPending = false;
+                if (granted) startSpeech(speechId);
+                else failSpeech(speechId, "마이크 권한을 허용해주세요.");
             });
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        RecommendationViewModel model = new ViewModelProvider(this).get(RecommendationViewModel.class);
-        if (model.state == null) {
-            model.state = restore(savedInstanceState);
-            if (model.state == null) {
-                model.state = new RecommendationState();
-                // 디버그 실행 옵션만 기본 모의 그룹을 생략할 수 있습니다.
-                if (!BuildConfig.DEBUG || getIntent().getBooleanExtra("mock_group", true))
-                    model.state.group = groups.defaultGroup();
-            }
-        }
-        state = model.state;
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override protected void onCreate(Bundle saved) {
+        super.onCreate(saved);
         speech = new SpeechInputController(this);
-        LinearLayout root = Ui.row(this);
-        root.setBackgroundColor(0xff0c1420);
-        root.setGravity(Gravity.TOP);
+        density = getResources().getDisplayMetrics().density;
+        viewportWidth = getResources().getConfiguration().screenWidthDp;
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(243, 240, 233));
+        web = new WebView(this);
+        web.setId(R.id.recommendation_web);
+        web.setBackgroundColor(Color.rgb(243, 240, 233));
+        WebSettings settings = web.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setUseWideViewPort(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setTextZoom(Math.round(getResources().getConfiguration().fontScale * 100));
+        web.addJavascriptInterface(new NativeBridge(), "CoDrive");
+        web.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return true; }
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                loaded = true;
+                view.evaluateJavascript("window.CoDriveViewport?.()", null);
+            }
+        });
+        web.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            viewportWidth = Math.max(1, Math.round((right - left) / density));
+            if (loaded) web.evaluateJavascript("window.CoDriveViewport?.()", null);
+        });
+        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            androidx.core.graphics.Insets bars =
-                    insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            androidx.core.graphics.Insets safe = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
+            view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
             return insets;
         });
-        int width = getResources().getConfiguration().screenWidthDp;
-        if (width >= 600)
-            root.addView(sidebar(width >= 1000), Ui.size(this, width >= 1000 ? 220 : 72, MATCH_PARENT));
-        LinearLayout main = Ui.column(this);
-        Ui.pad(main, width >= 1000 ? 32 : 12, 20, width >= 1000 ? 32 : 12, 16);
-        root.addView(main, new LinearLayout.LayoutParams(0, MATCH_PARENT, 1));
-        LinearLayout top = Ui.row(this);
-        contextTitle = Ui.text(this, "", 14, Ui.MUTED);
-        contextTitle.setId(R.id.context_title);
-        contextTitle.setMaxLines(2);
-        top.addView(contextTitle, new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1));
-        personal = Ui.button(this, "개인 추천", 0xff172333);
-        personal.setId(R.id.mode_personal);
-        group = Ui.button(this, "그룹 추천", 0xff172333);
-        group.setId(R.id.mode_group);
-        top.addView(personal, Ui.size(this, 110, 56));
-        top.addView(group, Ui.size(this, 110, 56));
-        main.addView(top, Ui.size(this, MATCH_PARENT, WRAP_CONTENT));
-        personal.setOnClickListener(v -> switchMode(false));
-        group.setOnClickListener(v -> switchMode(true));
-        host = new FrameLayout(this);
-        main.addView(host, new LinearLayout.LayoutParams(MATCH_PARENT, 0, 1));
-        LinearLayout footer = Ui.row(this);
-        TextView location = Ui.text(this, "●  대전 유성구 · 위치 예시", 11, Ui.MUTED);
-        footer.addView(location, new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1));
-        footer.addView(Ui.text(this, "프론트 미리보기 · 정차 상태 예시", 11, Ui.MUTED));
-        main.addView(footer);
-        render();
+        ViewCompat.requestApplyInsets(root);
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightStatusBars(true);
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightNavigationBars(true);
+        try {
+            String html = asset("route-recommendation.html")
+                    .replace("<head>", "<head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'\">")
+                    .replace("<script>", "<script>" + asset("native-adapter.js") + "</script><script>");
+            web.loadDataWithBaseURL("https://codrive.local/", html, "text/html", "UTF-8", null);
+        } catch (IOException error) { throw new IllegalStateException("추천 화면을 불러오지 못했어요.", error); }
     }
-    @SuppressWarnings("deprecation")
-    private RecommendationState restore(Bundle saved) {
-        return saved == null ? null : (RecommendationState) saved.getSerializable("recommendation");
-    }
-    private View sidebar(boolean expanded) {
-        LinearLayout side = Ui.column(this);
-        side.setBackgroundColor(0xff101b2a);
-        Ui.pad(side, expanded ? 16 : 8, 30, expanded ? 16 : 8, 24);
-        TextView brand = Ui.text(this, expanded ? "CoDrive." : "Co.", expanded ? 29 : 22, Ui.MINT);
-        Ui.bold(brand);
-        Ui.pad(brand, expanded ? 12 : 0, 0, 0, 0);
-        side.addView(brand);
-        Ui.gap(side, 44);
-        if (expanded) {
-            side.addView(Ui.text(this, "   OUR JOURNEY", 11, Ui.MUTED));
-            Ui.gap(side, 12);
-        }
-        String[] names = {"여행 시작", "우리 그룹", "실시간 주행", "AI 경로 추천", "음성 채널", "여행 기록"};
-        int[] icons = {R.drawable.ic_home, R.drawable.ic_group, R.drawable.ic_route, R.drawable.ic_spark,
-                R.drawable.ic_mic, R.drawable.ic_history};
-        for (int i = 0; i < names.length; i++) {
-            LinearLayout item = Ui.row(this);
-            Ui.pad(item, expanded ? 14 : 12, 14, 8, 14);
-            if (i == 3) {
-                item.setBackgroundResource(R.drawable.bg_selected);
-                item.setSelected(true);
-            }
-            ImageView icon = new ImageView(this);
-            icon.setImageResource(icons[i]);
-            icon.setImageTintList(android.content.res.ColorStateList.valueOf(i == 3 ? Ui.MINT : Ui.MUTED));
-            item.addView(icon, Ui.size(this, 22, 22));
-            if (expanded) {
-                TextView label = Ui.text(this, names[i], 14, i == 3 ? Ui.MINT : Ui.MUTED);
-                Ui.pad(label, 12, 0, 0, 0);
-                item.addView(label);
-            }
-            item.setContentDescription(names[i] + (i == 3 ? ", 현재 화면" : ", 준비 중"));
-            side.addView(item, Ui.size(this, MATCH_PARENT, 56));
-            Ui.gap(side, 7);
-        }
-        side.addView(new View(this), new LinearLayout.LayoutParams(1, 0, 1));
-        TextView vehicle = Ui.text(this, expanded ? "B   내 차량\n     목업 차량 3대" : "B", 13, Ui.MUTED);
-        vehicle.setLineSpacing(Ui.dp(this, 8), 1);
-        Ui.pad(vehicle, 10, 16, 0, 0);
-        side.addView(vehicle);
-        return side;
-    }
-    private void switchMode(boolean groupMode) {
-        cancelSpeech(true);
-        state.groupMode = groupMode;
-        render();
-    }
-    private void render() {
-        screen = null;
-        host.removeAllViews();
-        contextTitle.setText(state.needsGroup() ? "여행 그룹 만들기"
-                        : state.groupMode ? state.group.name + "  ·  차량 " + state.group.vehicleCount + "대"
-                                          : "장소·코스 추천");
-        personal.setTextColor(!state.groupMode ? Ui.MINT : Ui.MUTED);
-        personal.setSelected(!state.groupMode);
-        personal.setBackground(Ui.shape(this, !state.groupMode ? 0xff194148 : 0xff172333, 11));
-        group.setTextColor(state.groupMode ? Ui.MINT : Ui.MUTED);
-        group.setSelected(state.groupMode);
-        group.setBackground(Ui.shape(this, state.groupMode ? 0xff194148 : 0xff172333, 11));
-        if (state.needsGroup()) {
-            GroupCreateScreen create = new GroupCreateScreen(
-                    this, state.groupNameDraft, name -> state.groupNameDraft = name, name -> {
-                        state.group = groups.create(name);
-                        state.groupNameDraft = "";
-                        render();
-                    }, () -> switchMode(false));
-            host.addView(create.view);
-            return;
-        }
-        screen = new RecommendationScreen(this, state, new RecommendationScreen.Actions() {
-            @Override
-            public void microphone() {
-                if (recording || awaitingPermission) {
-                    cancelSpeech(true);
-                    return;
-                }
-                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                        == PackageManager.PERMISSION_GRANTED)
-                    startSpeech();
-                else {
-                    awaitingPermission = true;
-                    microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
-                }
-            }
-            @Override
-            public void editing() {
-                cancelSpeech(false);
-            }
-            @Override
-            public void submit() {
-                submitPrompt();
-            }
-        });
-        host.addView(screen.view);
-    }
-    private void submitPrompt() {
-        if (recording || screen == null)
-            return;
-        state.draft = screen.prompt.getText().toString();
-        if (state.submit()) {
-            screen.hideKeyboard();
-            render();
+    private String asset(String name) throws IOException {
+        try (InputStream input = getAssets().open(name); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int size;
+            while ((size = input.read(buffer)) != -1) output.write(buffer, 0, size);
+            return output.toString("UTF-8");
         }
     }
-    private void startSpeech() {
-        if (screen == null || state.needsGroup())
-            return;
-        screen.hideKeyboard();
-        recording = true;
-        screen.recording(true, false);
-        screen.status("듣고 있어요. 말을 마치면 자동 전송돼요.");
+    private final class NativeBridge {
+        @JavascriptInterface public String viewport() {
+            return "{\"width\":" + viewportWidth + ",\"density\":" + density + "}";
+        }
+        @JavascriptInterface public String readState() {
+            return getSharedPreferences("recommendation_screen", MODE_PRIVATE).getString("state", "{}");
+        }
+        @JavascriptInterface public void saveState(String json) {
+            if (json == null) return;
+            try {
+                new JSONObject(json);
+                getSharedPreferences("recommendation_screen", MODE_PRIVATE).edit().putString("state", json).apply();
+            } catch (JSONException ignored) { /* Ignore malformed checkpoints. */ }
+        }
+        @JavascriptInterface public boolean omitDefaultGroup() {
+            return BuildConfig.DEBUG && !getIntent().getBooleanExtra("mock_group", true);
+        }
+        @JavascriptInterface public void startSpeech(int id) {
+            runOnUiThread(() -> {
+                MainActivity.this.cancelSpeech(); speechId = id;
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                    MainActivity.this.startSpeech(id);
+                else { permissionPending = true; microphonePermission.launch(Manifest.permission.RECORD_AUDIO); }
+            });
+        }
+        @JavascriptInterface public void cancelSpeech(int id) {
+            runOnUiThread(() -> { if (id == speechId) MainActivity.this.cancelSpeech(); });
+        }
+    }
+    private void startSpeech(int id) {
         speech.start(new SpeechInputController.Listener() {
-            @Override
-            public void partial(String text) {
-                if (screen != null && !text.isEmpty())
-                    screen.setPrompt(text);
+            @Override public void ready() { dispatch(id, "start", "{}"); }
+            @Override public void partial(String text) { sendResult(id, text, false); }
+            @Override public void processing() { dispatch(id, "speechend", "{}"); }
+            @Override public void result(String text) {
+                sendResult(id, text, true); dispatch(id, "end", "{}");
+                if (id == speechId) speechId = -1;
             }
-            @Override
-            public void processing() {
-                if (screen != null) {
-                    screen.recording(true, true);
-                    screen.status("말씀하신 내용을 정리하고 있어요…");
-                }
-            }
-            @Override
-            public void result(String text) {
-                recording = false;
-                if (screen != null) {
-                    screen.recording(false, false);
-                    screen.setPrompt(text);
-                    submitPrompt();
-                }
-            }
-            @Override
-            public void error(String message) {
-                recording = false;
-                if (screen != null) {
-                    screen.recording(false, false);
-                    screen.setPrompt(state.draft);
-                    screen.status(message);
-                }
-            }
-            @Override
-            public void level(float rms) {
-                if (screen != null)
-                    screen.microphone.setLevel(rms);
-            }
+            @Override public void error(String message) { failSpeech(id, message); }
+            @Override public void level(float rms) { }
         });
     }
-    private void cancelSpeech(boolean restoreDraft) {
-        awaitingPermission = false;
-        if (!recording)
-            return;
-        recording = false;
-        speech.cancel();
-        if (screen != null) {
-            screen.recording(false, false);
-            screen.status("");
-            if (restoreDraft)
-                screen.setPrompt(state.draft);
+    private void sendResult(int id, String text, boolean complete) {
+        dispatch(id, "result", "{\"text\":" + JSONObject.quote(text) + ",\"complete\":" + complete + "}");
+    }
+    private void failSpeech(int id, String message) {
+        dispatch(id, "error", "{\"error\":\"native-speech\",\"message\":" + JSONObject.quote(message) + "}");
+        dispatch(id, "end", "{}");
+        if (id == speechId) cancelSpeech();
+    }
+    private void dispatch(int id, String event, String payload) {
+        if (id != speechId || web == null || !loaded) return;
+        web.evaluateJavascript("window.CoDriveSpeech.dispatch(" + id + "," + JSONObject.quote(event) + "," + payload + ")", null);
+    }
+    private void cancelSpeech() { speechId = -1; permissionPending = false; speech.cancel(); }
+    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
+    @Override protected void onPause() {
+        if (web != null) {
+            if (loaded && !permissionPending) web.evaluateJavascript("window.dispatchEvent(new Event('codrive-pause'))", null);
+            web.onPause();
         }
+        if (!permissionPending) cancelSpeech();
+        super.onPause();
     }
-    @Override
-    protected void onStop() {
-        cancelSpeech(true);
-        super.onStop();
-    }
-    @Override
-    protected void onSaveInstanceState(Bundle out) {
-        cancelSpeech(true);
-        out.putSerializable("recommendation", state);
-        super.onSaveInstanceState(out);
-    }
-    @Override
-    protected void onDestroy() {
-        speech.cancel();
+    @Override protected void onDestroy() {
+        cancelSpeech();
+        if (web != null) {
+            web.removeJavascriptInterface("CoDrive"); web.stopLoading();
+            ((FrameLayout)web.getParent()).removeView(web); web.destroy(); web = null;
+        }
         super.onDestroy();
     }
 }

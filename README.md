@@ -9,11 +9,11 @@
 | 조직 | HYUNDAI-APP-PROJ |
 | 플랫폼 | Pleos Connect / Android |
 | 개발 도구 | Android Studio |
-| 현재 상태 | AI 경로 추천 네이티브 목업 구현 |
+| 현재 상태 | HTML 디자인 앱 이식·Android 음성 입력 연결 |
 
 여러 차량이 함께 여행할 때 그룹 관리, 대열 확인, 음성 대화, 공동 의사결정, AI 추천과 여행 기록을 제공하는 앱을 목표로 합니다.
 
-현재는 `:app` 단일 모듈에서 Java 기반 Android View로 AI 경로 추천 화면과 모의 그룹 생성 화면을 실행할 수 있습니다. 서버·AI·차량 SDK·실제 내비게이션은 연결하지 않았습니다. 아래 기능별 요구사항은 전체 개발 범위이며, 구현된 목업 범위와 구분합니다.
+현재는 `:app` 단일 모듈에서 완성한 HTML을 앱에 포함해 추천 화면을 실행합니다. Android WebView가 화면을 표시하고, 마이크 권한과 한국어 음성 입력은 Java 코드에서 처리합니다. 서버·AI·차량 SDK·실제 내비게이션은 연결하지 않았습니다. 아래 기능별 요구사항은 전체 개발 범위이며, 구현된 목업 범위와 구분합니다.
 
 ## 개발 시작하기
 
@@ -26,6 +26,32 @@ git switch develop
 Android Studio에서 프로젝트 루트를 열고 Gradle을 동기화합니다. 필요한 JDK, Android SDK 및 Gradle 버전은 프로젝트 설정을 기준으로 사용합니다. 실행 구성에서 `app`을 선택해 Pleos 에뮬레이터나 Android 기기에서 실행하면 `com.codrive.app.MainActivity`가 열립니다.
 
 ## 현재 실행 가능한 목업
+
+기준은 [완성한 HTML](docs/design/route-recommendation.html)과 [테마 가이드](docs/design/design-guide.md)입니다. 같은 HTML을 `app/src/main/assets/route-recommendation.html`에 포함해 색상·배치·애니메이션·상태 전환을 유지합니다. 외부 웹사이트나 로컬 미리보기 서버가 필요하지 않으며 새로운 라이브러리를 추가하지 않았습니다.
+
+- 블랙·크림 테마, 가운데 입력창과 전송 후 하단 이동, 클릭·드래그 토글, 회전하는 예시 카드와 즉시 전송.
+- OFF는 3초 후 더미 추천지 목록을 표시하고 직접 선택합니다. ON은 3초 답변 로딩 후 자동으로 경로 설정을 시작합니다.
+- 경로 반영 시 `네비게이션에 반영중입니다`를 2초 표시하고 왼쪽 경로 패널을 갱신합니다. 제목 아래에는 개인 또는 그룹 별칭을 표시합니다.
+- 다른 모드의 경로를 바꿀 때는 10초 팝업을 표시합니다. 수락·시간 만료는 새 경로 반영, 거절·Escape는 기존 경로 유지입니다.
+- 앱 내부에 대화·경로·입력 초안·모드·토글·그룹과 대기 시간을 저장하고 화면 재생성 시 복원합니다.
+- 마이크는 Android `SpeechInputController`와 연결합니다. 최종 결과를 자동 전송하며 취소·오류 시 초안을 유지하고 지연 결과를 무시합니다.
+
+`MainActivity.java`는 앱 내부 HTML 표시·화면 여백·키보드·권한·상태 저장을 담당하고, `assets/native-adapter.js`는 Android 음성 이벤트를 기존 HTML 입력 흐름으로 전달합니다. 나머지 메뉴와 실제 AI·내비게이션·차량 간 동기화는 후속 구현 대상입니다.
+
+```bash
+# HTML 디자인 수정 후 앱 파일도 동기화
+cp docs/design/route-recommendation.html app/src/main/assets/route-recommendation.html
+node docs/design/verify-route-recommendation.cjs
+node docs/design/verify-native-adapter.cjs
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-configuration-cache
+./gradlew :app:connectedDebugAndroidTest --no-configuration-cache
+```
+
+기기 검사는 실제 WebView에서 OFF 선택, ON 자동 경로, 거절·수락·10초 만료, 2초 반영, 그룹 생성·별칭, 입력·경로·타이머 복원과 320·829·1682dp 창 및 글자 배율 1.0·1.5를 확인합니다. 실제 음성 인식 품질은 기기의 마이크·인식 서비스 환경에서 별도로 확인합니다.
+
+## 이전 Java View 목업: 참고용 보존
+
+아래는 교체 전 구현 설명입니다. 해당 클래스는 보존했으며 현재 시작 화면은 위의 HTML 기반 화면입니다.
 
 디자인 기준은 [브라우저 초안](docs/design/route-recommendation.html)입니다. 이를 WebView로 띄우지 않고 Java 기반 Android View로 옮겼습니다. 새로운 라이브러리는 추가하지 않았습니다.
 
