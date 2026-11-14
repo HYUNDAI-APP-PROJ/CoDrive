@@ -42,8 +42,24 @@
     return M.isAvailable(arrival) && arrival.value.navigation === NAVIGATION.ARRIVED && arrival.value.stopKind !== null;
   }
 
+  /**
+   * 현재 안내 중인 남은 경로. 현재 경로 패널 표시에 사용한다. 이미 지난 지점은 포함하지 않는다.
+   * value: { source: '내비게이션 경로', ownerLabel: '개인'|그룹 별칭, currentLocation,
+   *          stops: [{ stopKind: 'WAYPOINT'|'DESTINATION', placeId, placeName }] }
+   * stops 가 비어 있으면 안내 중인 경로가 없는 것이다. 정보를 알 수 없으면 Measurement NO_DATA.
+   */
+  async function getActiveRoute() {
+    const raw = readRaw();
+    const route = raw.navi?.route;
+    if (!route) return M.missing(M.QUALITY.NO_DATA, SOURCE);
+    return M.create({
+      source: '내비게이션 경로', ownerLabel: route.ownerLabel, currentLocation: route.currentLocation,
+      stops: route.stops.filter(stop => Object.hasOwn(STOP_KIND, stop.stopKind)).map(stop => ({ ...stop }))
+    }, M.QUALITY.AVAILABLE, raw.observedAt, SOURCE);
+  }
+
   /** 도착 상태가 바뀌거나 시간이 흐를 때 알린다. @returns {() => void} 구독 해제 함수 */
   function subscribe(callback) { return subscribeRaw(callback); }
 
-  window.CoDriveNavi = Object.freeze({ NAVIGATION, STOP_KIND, getArrivalState, isArrivedAtStop, subscribe });
+  window.CoDriveNavi = Object.freeze({ NAVIGATION, STOP_KIND, getArrivalState, isArrivedAtStop, getActiveRoute, subscribe });
 })();

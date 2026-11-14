@@ -72,6 +72,7 @@
       Object.freeze({ vehicleId: 'vehicle-c', displayName: 'C 차량', memberName: '지연', displayOrder: 2 })
     ])
   });
+  const CURRENT_LOCATION_ON_ROAD = '원주 부근'; // 휴게소로 가는 도중의 현재 위치 표시
   const RATED_EFFICIENCY = 12.8; // 시연 차량의 공인 복합 연비(km/L)
 
   let testNow = null;
@@ -116,6 +117,22 @@
     emit();
   }
 
+  // 남은 안내 경로. 이미 지난 지점은 넣지 않는다(design-guide 현재 경로 패널 규칙).
+  // 휴게소로 가는 중이면 휴게소 → 목적지, 휴게소에 도착했으면 목적지만, 목적지에 도착했으면 남은 경로 없음.
+  function routeFor(navi, place) {
+    const arrived = navi.navigation === 'ARRIVED';
+    const stops = [];
+    if (place.stopKind === 'WAYPOINT') {
+      if (!arrived) stops.push(place);
+      stops.push(PLACES.destination);
+    } else if (!arrived) stops.push(place);
+    return {
+      ownerLabel: hasGroup ? GROUP.name : '개인',
+      currentLocation: arrived ? place.placeName : CURRENT_LOCATION_ON_ROAD,
+      stops: stops.map(stop => ({ stopKind: stop.stopKind, placeId: stop.placeId, placeName: stop.placeName }))
+    };
+  }
+
   // 현재 시각 기준의 원시 값. 단위는 초·밀리초이며 Measurement 변환은 각 모듈이 맡는다.
   function read() {
     const at = now();
@@ -139,7 +156,8 @@
       },
       navi: s.navi ? {
         navigation: s.navi.navigation,
-        stopKind: place.stopKind, placeId: place.placeId, placeName: place.placeName
+        stopKind: place.stopKind, placeId: place.placeId, placeName: place.placeName,
+        route: routeFor(s.navi, place)
       } : null,
       group: hasGroup ? {
         groupId: GROUP.groupId, name: GROUP.name, myVehicleId: GROUP.myVehicleId,
