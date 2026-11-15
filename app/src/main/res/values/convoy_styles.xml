@@ -1,0 +1,60 @@
+<resources>
+    <style name="Theme.CoDrive.Driving" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:windowBackground">@color/convoy_background</item>
+        <item name="android:statusBarColor">@color/convoy_background</item>
+        <item name="android:navigationBarColor">@color/convoy_background</item>
+        <item name="colorPrimary">@color/convoy_ink</item>
+        <item name="colorOnPrimary">@color/convoy_surface</item>
+        <item name="colorSecondary">@color/convoy_ink</item>
+        <item name="android:colorAccent">@color/convoy_ink</item>
+        <item name="android:colorBackgroundFloating">@color/convoy_surface</item>
+        <item name="colorControlHighlight">@color/convoy_hover</item>
+    </style>
+    <style name="ConvoyText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/convoy_ink</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="ConvoyText.Muted">
+        <item name="android:textColor">@color/convoy_muted</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="ConvoyAction" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/convoy_ink</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">64dp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:stateListAnimator">@animator/convoy_button_press</item>
+    </style>
+    <style name="ConvoyNavItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:importantForAccessibility">yes</item>
+    </style>
+    <style name="ConvoyNavIcon">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:tint">@color/convoy_nav_muted</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+    <style name="ConvoyNavLabel" parent="ConvoyText">
+        <item name="android:layout_marginStart">12dp</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/convoy_nav_muted</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+</resources>
