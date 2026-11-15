@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CoDrive · AI 경로 추천</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+      color: #24221e; background: #f3f0e9; color-scheme: light;
+      --accent: #24221e; --on-accent: #fffdf8; --muted: #706c64; --line: #d7d1c7; --surface: #fffdf8;
+      --message-radius: 41px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 140ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out; }
+    button:not(:disabled):not(.auto-toggle):active { transform: scale(.96); filter: brightness(.94); box-shadow: inset 0 2px 4px #24221e20; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .shell { height: 100dvh; display: grid; grid-template-columns: 220px 280px minmax(0, 1fr); background: #f3f0e9; }
+    .sidebar { width: 220px; padding: 32px 16px; flex-shrink: 0; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .brand { margin: 0 12px 40px; font-size: 26px; font-weight: 700; letter-spacing: -.7px; }
+    .nav { display: grid; gap: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 14px 12px; border-radius: 6px; font-size: 18px; color: #aaa7a0; }
+    .nav-item.active { color: #24221e; background: #f3f0e9; font-weight: 600; }
+    .main { min-width: 0; min-height: 0; flex: 1; padding: 28px 40px 24px; display: flex; flex-direction: column; overflow-y: auto; }
+    .top { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+    .breadcrumb { min-width: 0; margin-right: auto; display: grid; gap: 6px; font-size: 24px; font-weight: 600; opacity: 0; transform: translateX(-20px); visibility: hidden; transition: opacity 240ms ease-out, transform 320ms cubic-bezier(.22, 1, .36, 1), visibility 0s 320ms; }
+    .breadcrumb[aria-hidden="false"] { opacity: 1; transform: translateX(0); visibility: visible; transition-delay: 0s; }
+    .context-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; }
+    .context-title { min-width: 0; overflow-wrap: anywhere; }
+    .group-count { color: var(--muted); font-size: 18px; font-weight: 400; white-space: nowrap; }
+    .group-members { color: var(--muted); font-size: 16px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+    .mode-control { display: flex; flex-shrink: 0; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; }
+    .mode-control button { min-height: 64px; padding: 12px 24px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 18px; }
+    .mode-control button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .content { width: min(100%, 1040px); min-height: 0; flex: 1; margin: 0 auto; padding: 24px 0; display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); transition: grid-template-rows 520ms cubic-bezier(.22, 1, .36, 1); }
+    .content.has-conversation { grid-template-rows: minmax(0, 1fr) auto minmax(0, 0fr); }
+    #prompt-form { position: relative; grid-row: 2; min-width: 0; }
+    .empty-intro { position: absolute; bottom: calc(100% + 28px); left: 0; width: 100%; text-align: center; transition: opacity 180ms ease-out, transform 220ms ease-out; }
+    .empty-intro h2 { margin: 0 0 14px; font-size: clamp(26px, 2.2vw, 34px); font-weight: 600; line-height: 1.4; }
+    .example-prompts { overflow: hidden; padding: 6px 0; mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+    .example-track { display: flex; width: max-content; animation: example-conveyor 28s linear infinite; }
+    .example-group { display: flex; flex-shrink: 0; gap: 12px; padding-right: 12px; }
+    .example-card { min-width: 260px; min-height: 64px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 20px; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); background: var(--surface); font-size: 18px; white-space: nowrap; }
+    .example-card:hover { border-color: var(--muted); background: #e9e4da; }
+    @keyframes example-conveyor { to { transform: translateX(-50%); } }
+    .example-prompts:hover .example-track, .example-prompts:focus-within .example-track, .example-prompts:active .example-track { animation-play-state: paused; }
+    .content.has-conversation .empty-intro { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .content.has-conversation .example-track { animation-play-state: paused; }
+    .composer { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 24px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--message-radius); }
+    .composer:focus-within { border-color: var(--accent); }
+    .prompt-input { flex: 1; min-width: 0; width: 100%; height: 64px; padding: 0; margin: 0; color: var(--accent); background: transparent; border: 0; border-radius: 0; font-size: 22px; line-height: 1.6; }
+    .prompt-input::placeholder { color: var(--muted); opacity: 1; }
+    .prompt-input:focus-visible { outline: none; }
+    .composer-bottom { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
+    .voice-button { width: 64px; min-width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 50%; }
+    .voice-button:hover { background: #e9e4da; }
+    .voice-button.recording, .voice-button.processing { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .voice-button.recording > svg { display: none; }
+    .mic-wave { display: none; width: 24px; height: 24px; align-items: center; justify-content: center; gap: 3px; }
+    .mic-wave i { width: 3px; height: 10px; background: currentColor; border-radius: 2px; }
+    .mic-wave i:nth-child(2), .mic-wave i:nth-child(4) { height: 17px; }
+    .mic-wave i:nth-child(3) { height: 24px; }
+    .voice-button.recording .mic-wave { display: flex; }
+    .voice-button.recording .mic-wave i { transform-origin: center; animation: mic-wave 900ms ease-in-out infinite; }
+    .voice-button.recording .mic-wave i:nth-child(1) { animation-delay: -.32s; }
+    .voice-button.recording .mic-wave i:nth-child(2) { animation-delay: -.16s; }
+    .voice-button.recording .mic-wave i:nth-child(4) { animation-delay: -.24s; }
+    .voice-button.recording .mic-wave i:nth-child(5) { animation-delay: -.4s; }
+    @keyframes mic-wave { 0%, 100% { transform: scaleY(.6); } 50% { transform: scaleY(1); } }
+    .send { width: 64px; height: 64px; flex-shrink: 0; display: grid; place-items: center; padding: 0; color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); border-radius: 50%; }
+    .send:hover { background: #403d37; }
+    .send:disabled { cursor: default; color: var(--muted); background: #e6e0d7; border-color: #e6e0d7; }
+    .composer-details { display: flex; align-items: flex-start; gap: 16px; }
+    .origin { display: inline-flex; align-items: center; gap: 8px; margin: 16px 0 0 16px; color: var(--muted); font-size: 18px; white-space: nowrap; }
+    .origin svg { width: 20px; height: 20px; }
+    .auto-panel { min-width: 0; max-width: calc(100% - 32px); margin: 4px 16px 0 auto; }
+    .auto-controls { display: flex; align-items: center; gap: 8px; }
+    .auto-toggle { width: 52px; min-width: 52px; height: 48px; display: grid; place-items: center; padding: 0; background: transparent; border: 0; border-radius: 999px; touch-action: pan-y; user-select: none; }
+    .switch { display: block; width: 52px; height: 30px; padding: 4px; background: #d6d0c5; border-radius: 20px; flex-shrink: 0; transition: background-color 220ms ease-out; }
+    .switch-thumb { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px #24221e18; transform: translateX(var(--thumb-x, 0px)); transition: transform 280ms cubic-bezier(.22, 1, .36, 1), background-color 220ms ease-out; cursor: grab; }
+    .auto-toggle[aria-checked="true"] .switch { background: var(--accent); }
+    .auto-toggle[aria-checked="true"] .switch-thumb { transform: translateX(var(--thumb-x, 22px)); background: var(--on-accent); }
+    .auto-toggle.dragging .switch-thumb { transition: none; cursor: grabbing; }
+    .auto-copy { min-width: 0; display: grid; margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+    .auto-copy > span { grid-area: 1 / 1; transition: opacity 180ms ease-out; }
+    .auto-copy-on { opacity: 0; }
+    .auto-toggle[aria-checked="true"] + .auto-copy .auto-copy-off { opacity: 0; }
+    .auto-toggle[aria-checked="true"] + .auto-copy .auto-copy-on { opacity: 1; }
+    .voice-status { padding-bottom: 16px; color: var(--accent); font-size: 18px; line-height: 1.5; }
+    .conversation { grid-row: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #aaa397 transparent; padding-right: 8px; margin-bottom: 24px; animation: conversation-enter 240ms ease-out; }
+    @keyframes conversation-enter { from { opacity: 0; } to { opacity: 1; } }
+    .turn + .turn { margin-top: 28px; }
+    .user-message { width: fit-content; max-width: 90%; margin-left: auto; padding: 24px 32px; background: #e7e1d6; border-radius: var(--message-radius); }
+    .user-meta { margin: 0 0 8px; color: var(--muted); font-size: 18px; }
+    .user-text { margin: 0; color: var(--accent); font-size: 20px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .result { min-height: 90px; margin-top: 16px; padding: 24px 32px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--message-radius); animation: reply-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
+    @keyframes reply-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .reply-loading { min-height: 40px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 18px; }
+    .loading-dots { display: inline-flex; gap: 5px; }
+    .loading-dots i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: loading-dot 900ms ease-in-out infinite; }
+    .loading-dots i:nth-child(2) { animation-delay: 150ms; }
+    .loading-dots i:nth-child(3) { animation-delay: 300ms; }
+    @keyframes loading-dot { 0%, 100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+    .reply-body { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(14px); transition: grid-template-rows 420ms cubic-bezier(.22, 1, .36, 1), opacity 420ms ease-out, transform 420ms cubic-bezier(.22, 1, .36, 1); }
+    .reply-content { min-height: 0; overflow: hidden; }
+    .result:not(.is-loading) .reply-loading { display: none; }
+    .result:not(.is-loading) .reply-body { grid-template-rows: 1fr; opacity: 1; transform: translateY(0); }
+    .result-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .result h2 { margin: 0; font-size: 22px; font-weight: 600; }
+    .preview-label { color: var(--muted); font-size: 18px; }
+    .route-preview { display: flex; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+    .route-stop { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 18px; white-space: nowrap; }
+    .route-stop span { display: inline-grid; place-items: center; width: 28px; height: 28px; color: var(--on-accent); background: var(--accent); border-radius: 50%; font-size: 18px; }
+    .place-list { display: grid; gap: 8px; margin: 16px 0; padding: 0; list-style: none; }
+    .place-list li + li { border-top: 1px solid var(--line); }
+    .place-choice { width: 100%; min-height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 0; border-radius: 8px; background: transparent; color: var(--accent); text-align: left; }
+    .place-choice:hover { background: #e9e4da; }
+    .place-name { display: block; font-size: 20px; font-weight: 600; line-height: 1.5; }
+    .place-description { display: block; margin-top: 6px; color: var(--muted); font-size: 18px; line-height: 1.5; }
+    .result p { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.6; }
+    .create-screen { width: min(100%, 620px); margin: 56px auto auto; }
+    h1 { margin: 0 0 24px; font-size: 28px; font-weight: 600; }
+    .create-panel { padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+    .create-label { display: block; margin-bottom: 12px; font-size: 18px; }
+    .create-input { width: 100%; min-height: 64px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--accent); font-size: 20px; }
+    .mock-members { margin: 20px 0; color: var(--muted); font-size: 18px; }
+    .create-action { width: 100%; min-height: 64px; padding: 16px; border: 0; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-size: 18px; font-weight: 600; }
+    .create-back { width: 100%; min-height: 64px; margin-top: 8px; padding: 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 18px; }
+    .create-back:hover { color: var(--accent); background: #e9e4da; }
+    .create-error { margin: 12px 0 0; color: var(--accent); font-size: 18px; line-height: 1.5; }
+    .create-error:empty { display: none; }
+    .route-sidebar { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 32px 24px; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .route-header { display: flex; align-items: center; gap: 12px; }
+    .route-header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+    .route-owner { margin: 8px 0 0 36px; color: #aaa7a0; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .route-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 0; text-align: center; color: #aaa7a0; animation: conversation-enter 240ms ease-out; }
+    .route-empty > svg { width: 32px; height: 32px; }
+    .route-empty p { margin: 0; font-size: 18px; line-height: 1.6; word-break: keep-all; }
+    .route-active { margin-top: 32px; animation: conversation-enter 240ms ease-out; }
+    .route-source { margin: 0 0 28px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-timeline { margin: 0; padding: 0; list-style: none; }
+    .route-point { position: relative; padding: 0 0 36px 32px; }
+    .route-point::before { position: absolute; z-index: 1; left: 3px; top: 6px; width: 10px; height: 10px; border: 2px solid #aaa7a0; border-radius: 50%; background: #151515; content: ""; }
+    .route-point:not(:last-child)::after { position: absolute; left: 8px; top: 16px; bottom: -6px; width: 1px; background: #393938; content: ""; }
+    .route-point:first-child::before { border-color: #f3f0e9; background: #f3f0e9; box-shadow: 0 0 0 4px #393938; }
+    .route-point:last-child { padding-bottom: 0; }
+    .route-point:last-child::before { top: 0; width: 24px; height: 24px; border: 0; border-radius: 0; background: #f3f0e9; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .route-point-label { margin: 0 0 8px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-point-name { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+    .route-confirm { width: min(560px, calc(100% - 48px)); max-height: calc(100dvh - 48px); padding: 32px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--message-radius); color: var(--accent); background: var(--surface); }
+    .route-confirm[open] { animation: reply-enter 240ms cubic-bezier(.22, 1, .36, 1) both; }
+    .route-confirm::backdrop { background: #15151580; animation: conversation-enter 180ms ease-out; }
+    .route-confirm h2 { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.5; }
+    .route-confirm p { margin: 16px 0 0; font-size: 20px; line-height: 1.6; }
+    .route-confirm .route-timeout { margin-top: 24px; color: var(--muted); font-size: 18px; }
+    .route-countdown { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .route-confirm-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .route-confirm-actions button { flex: 1; min-height: 64px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); background: var(--surface); font-size: 18px; white-space: nowrap; }
+    .route-confirm-actions .route-accept { border-color: var(--accent); color: var(--on-accent); background: var(--accent); }
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 80px 220px minmax(0, 1fr); }
+      .sidebar { width: 80px; padding: 28px 12px; }
+      .brand { margin: 0 0 36px; text-align: center; font-size: 22px; }
+      .brand-full, .nav-item span { display: none; }
+      .nav-item { justify-content: center; padding: 14px 0; }
+      .main { padding: 24px; }
+      .breadcrumb { font-size: 22px; }
+      .route-sidebar { padding: 28px 20px; }
+    }
+    @media (min-width: 1101px) { .brand-short { display: none; } }
+    @media (max-width: 900px) {
+      .top { gap: 20px; }
+      .mode-control button { flex: 1; }
+      .create-screen { margin-top: 32px; }
+    }
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 80px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .sidebar { grid-column: 1; grid-row: 1 / -1; }
+      .main { grid-column: 2; grid-row: 1; }
+      .route-sidebar { grid-column: 2; grid-row: 2; max-height: 32dvh; padding: 20px 24px; border-right: 0; border-top: 1px solid #393938; }
+      .route-empty { flex-direction: row; justify-content: flex-start; padding: 16px 0 0; text-align: left; }
+      .route-active { margin-top: 20px; }
+      .route-source { margin-bottom: 20px; }
+    }
+    @media (max-width: 600px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .main, .route-sidebar { grid-column: 1; }
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      .composer { gap: 8px; padding: 8px 8px 8px 16px; }
+      .composer-details { flex-wrap: wrap; gap: 0; }
+      .prompt-input { font-size: 20px; }
+      .user-message { max-width: 100%; }
+      .create-panel { padding: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button, .auto-toggle, .switch, .switch-thumb, .auto-copy > span, .content, .reply-body, .empty-intro, .breadcrumb { transition: none; }
+      .voice-button.recording .mic-wave i, .conversation, .result, .loading-dots i, .route-empty, .route-active, .route-confirm, .route-confirm::backdrop { animation: none; }
+      .example-prompts { overflow-x: auto; mask-image: none; }
+      .example-track { animation: none; }
+      .example-group[aria-hidden="true"] { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></symbol>
+      <symbol id="i-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5ZM20 2v4m-2-2h4"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.8 7.5M3 4v7h7m2-4v6l4 2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/></symbol>
+      <symbol id="i-food" viewBox="0 0 24 24"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v19m13 0V3c-4 2-5 6-5 10h5"/></symbol>
+      <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M3 8h13v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5Zm13 1h2a3 3 0 0 1 0 6h-2M6 2v2m4-2v2m4-2v2"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Zm-4 9 3 3 5-6"/></symbol>
+    </defs>
+  </svg>
+  <div class="shell">
+    <aside class="sidebar" aria-label="주요 메뉴">
+      <div class="brand"><span class="brand-full">CoDrive</span><span class="brand-short">Co</span></div>
+      <nav class="nav" aria-label="화면 구성 미리보기">
+        <div class="nav-item" aria-label="여행 시작, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-home"/></svg><span>여행 시작</span></div>
+        <div class="nav-item" aria-label="우리 그룹, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-group"/></svg><span>우리 그룹</span></div>
+        <div class="nav-item" aria-label="실시간 주행, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-pin"/></svg><span>실시간 주행</span></div>
+        <div class="nav-item active" aria-label="AI 경로 추천" aria-current="page"><svg aria-hidden="true"><use href="#i-route"/></svg><span>AI 경로 추천</span></div>
+        <div class="nav-item" aria-label="음성 채널, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>음성 채널</span></div>
+        <div class="nav-item" aria-label="여행 기록, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-history"/></svg><span>여행 기록</span></div>
+      </nav>
+    </aside>
+    <aside class="route-sidebar" aria-labelledby="route-heading">
+      <header class="route-header"><svg aria-hidden="true"><use href="#i-route"/></svg><h2 id="route-heading">현재 경로</h2></header>
+      <p class="route-owner" id="route-owner" hidden></p>
+      <div class="route-empty" id="route-empty"><svg aria-hidden="true"><use href="#i-pin"/></svg><p>안내 중인 경로가 없어요</p></div>
+      <div class="route-empty" id="route-loading" aria-hidden="true" hidden><span class="loading-dots"><i></i><i></i><i></i></span><p>네비게이션에 반영중입니다</p></div>
+      <div class="route-active" id="route-active" hidden>
+        <p class="route-source" id="route-source"></p>
+        <ol class="route-timeline" id="route-timeline" aria-label="현재 위치부터 목적지까지"></ol>
+      </div>
+      <p class="sr-only" id="route-status" role="status"></p>
+    </aside>
+    <main class="main">
+      <header class="top">
+        <div class="breadcrumb" id="context-label" aria-hidden="true">
+          <div class="context-heading"><span class="context-title" id="context-title"></span><span class="group-count" id="context-count" hidden></span></div>
+          <span class="group-members" id="context-members" hidden></span>
+        </div>
+        <div class="mode-control" role="group" aria-label="추천 사용 범위">
+          <button type="button" id="mode-personal" data-mode="personal" aria-pressed="true">개인</button>
+          <button type="button" id="mode-group" data-mode="group" aria-pressed="false">그룹</button>
+        </div>
+      </header>
+      <section class="content" id="content" aria-labelledby="heading">
+        <h1 id="heading" class="sr-only">경로 추천</h1>
+        <section class="conversation" id="conversation" role="log" aria-label="추천 대화 기록" aria-live="polite" hidden></section>
+        <form id="prompt-form">
+          <div class="empty-intro" id="empty-intro" aria-hidden="false">
+            <h2>어디로 가고 싶나요?</h2>
+            <div class="example-prompts" aria-label="예시 프롬프트">
+              <div class="example-track">
+                <div class="example-group">
+                  <button class="example-card" type="button" data-example="대전 근교에서 조용히 다녀올 드라이브 코스를 추천해줘"><svg aria-hidden="true"><use href="#i-route"/></svg>대전 근교, 조용한 드라이브 코스</button>
+                  <button class="example-card" type="button" data-example="주차하기 편한 근처 맛집을 추천해줘"><svg aria-hidden="true"><use href="#i-food"/></svg>주차하기 편한 근처 맛집</button>
+                  <button class="example-card" type="button" data-example="가는 길에 잠깐 쉬어갈 카페를 추천해줘"><svg aria-hidden="true"><use href="#i-coffee"/></svg>가는 길에 잠깐 쉬어갈 카페</button>
+                  <button class="example-card" type="button" data-example="친구들과 함께 가기 좋은 여행지를 추천해줘"><svg aria-hidden="true"><use href="#i-group"/></svg>친구들과 함께 가기 좋은 여행지</button>
+                </div>
+                <div class="example-group" aria-hidden="true">
+                  <button class="example-card" type="button" tabindex="-1" data-example="대전 근교에서 조용히 다녀올 드라이브 코스를 추천해줘"><svg aria-hidden="true"><use href="#i-route"/></svg>대전 근교, 조용한 드라이브 코스</button>
+                  <button class="example-card" type="button" tabindex="-1" data-example="주차하기 편한 근처 맛집을 추천해줘"><svg aria-hidden="true"><use href="#i-food"/></svg>주차하기 편한 근처 맛집</button>
+                  <button class="example-card" type="button" tabindex="-1" data-example="가는 길에 잠깐 쉬어갈 카페를 추천해줘"><svg aria-hidden="true"><use href="#i-coffee"/></svg>가는 길에 잠깐 쉬어갈 카페</button>
+                  <button class="example-card" type="button" tabindex="-1" data-example="친구들과 함께 가기 좋은 여행지를 추천해줘"><svg aria-hidden="true"><use href="#i-group"/></svg>친구들과 함께 가기 좋은 여행지</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="voice-status" id="voice-status" role="status" hidden><span id="voice-message"></span></div>
+          <div class="composer">
+            <input class="prompt-input" id="prompt" type="text" aria-label="원하는 장소나 코스 입력" placeholder="가고 싶은 곳이나 코스를 입력하세요" maxlength="1000">
+            <div class="composer-bottom">
+              <button class="voice-button" id="voice-button" type="button" aria-label="음성으로 입력하기" aria-pressed="false" aria-describedby="footnote"><svg aria-hidden="true"><use href="#i-mic"/></svg><span class="mic-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button>
+              <button class="send" id="send-button" type="submit" aria-label="경로 추천받기" disabled><svg aria-hidden="true"><use href="#i-right"/></svg></button>
+            </div>
+          </div>
+          <div class="composer-details">
+            <span class="origin"><svg aria-hidden="true"><use href="#i-pin"/></svg>대전 유성구</span>
+            <div class="auto-panel">
+              <span class="sr-only" id="auto-title">경로 자동 결정</span>
+              <div class="auto-controls">
+                <button id="auto-route" class="auto-toggle" type="button" role="switch" aria-checked="false" aria-labelledby="auto-title" aria-describedby="auto-copy"><span class="switch" aria-hidden="true"><span class="switch-thumb"></span></span></button>
+                <p class="auto-copy" aria-hidden="true"><span class="auto-copy-off">추천 경로를 직접 선택해요.</span><span class="auto-copy-on">최대한 빠르게 경로를 설정해줘요.</span></p>
+                <span class="sr-only" id="auto-copy" role="status">추천 경로를 직접 선택해요.</span>
+              </div>
+            </div>
+          </div>
+        </form>
+        <template id="reply-template">
+          <section class="result" aria-label="추천 응답 예시" aria-busy="false">
+            <div class="reply-loading" role="status"><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>답변을 준비하고 있어요.</span></div>
+            <div class="reply-body" aria-hidden="false"><div class="reply-content">
+              <div class="result-head"><h2 class="result-title">추천 장소</h2><span class="preview-label">예시</span></div>
+              <ul class="place-list" aria-label="추천 장소 목록"></ul>
+              <div class="route-preview" hidden></div>
+              <p class="result-copy"></p>
+            </div></div>
+          </section>
+        </template>
+        <template id="place-template">
+          <button class="place-choice" type="button"><span><span class="place-name"></span><span class="place-description"></span></span><svg aria-hidden="true"><use href="#i-right"/></svg></button>
+        </template>
+        <p class="sr-only" id="footnote">말을 마치면 자동 전송합니다. 다시 누르면 취소합니다.</p>
+      </section>
+      <section class="create-screen" id="group-create" aria-labelledby="create-heading" hidden>
+        <h1 id="create-heading">그룹 만들기</h1>
+        <form class="create-panel" id="group-create-form">
+          <label class="create-label" for="group-name">여행 그룹 이름</label>
+          <input class="create-input" id="group-name" type="text" placeholder="예: 강릉 주말 여행" maxlength="30" aria-describedby="group-create-error">
+          <p class="mock-members">참여 차량 3대 · 예시</p>
+          <button class="create-action" type="submit">그룹 만들기</button>
+          <button class="create-back" id="back-personal" type="button">개인 추천으로 돌아가기</button>
+          <p class="create-error" id="group-create-error" role="status"></p>
+        </form>
+      </section>
+    </main>
+  </div>
+  <dialog class="route-confirm" id="route-confirm" aria-labelledby="route-confirm-title" aria-describedby="route-confirm-message route-timeout">
+    <h2 id="route-confirm-title">이미 경로가 설정되어 있어요.</h2>
+    <p id="route-confirm-message">현재 경로를 취소하고 새 경로로 설정할까요?</p>
+    <p class="route-timeout" id="route-timeout"><span class="route-countdown" id="route-countdown">10</span>초 후 새 경로로 자동 변경해요.</p>
+    <div class="route-confirm-actions"><button id="route-reject" type="button" autofocus>거절</button><button class="route-accept" id="route-accept" type="button">새 경로 수락</button></div>
+  </dialog>
+  <script>
+    (() => {
+      'use strict';
+      const prompt = document.getElementById('prompt');
+      const send = document.getElementById('send-button');
+      const toggle = document.getElementById('auto-route');
+      const autoCopy = document.getElementById('auto-copy');
+      const voice = document.getElementById('voice-button');
+      const voiceStatus = document.getElementById('voice-status');
+      const voiceMessage = document.getElementById('voice-message');
+      const conversation = document.getElementById('conversation');
+      const routeConfirm = document.getElementById('route-confirm');
+      const historyKey = 'codrive.recommendation.conversation.v1';
+      const routeKey = 'codrive.recommendation.route.v1';
+      const nativeHost = window.CoDrive;
+      let appState = {};
+      if (nativeHost) {
+        try { appState = JSON.parse(nativeHost.readState()) || {}; }
+        catch { /* A malformed checkpoint starts a fresh screen. */ }
+      }
+      const turns = [];
+      const previewParams = new URLSearchParams(window.location.search);
+      // Add ?group=none to the preview URL to exercise the group creation flow.
+      const mockGroup = { id: 'mock-gangneung', name: '강릉 주말 여행', vehicles: ['A 차량', 'B 차량', 'C 차량'], members: ['나', '민수', '지연'] };
+      let group = previewParams.get('group') === 'none' ? null : mockGroup;
+      if (nativeHost) {
+        if (appState.group === null) group = null;
+        else if (appState.group && typeof appState.group.id === 'string' && typeof appState.group.name === 'string'
+            && Array.isArray(appState.group.vehicles) && Array.isArray(appState.group.members)) group = appState.group;
+        else if (nativeHost.omitDefaultGroup()) group = null;
+      }
+      let mode = 'personal';
+      let recognition = null;
+      let voiceBefore = '';
+      // Fixed demo data, shared by typed, spoken and example prompts.
+      const dummyPlaces = [
+        { name: '대청호 산책로', description: '산책 · 물가를 따라 가볍게 걷기 좋은 곳' },
+        { name: '호숫가 식당', description: '식사 · 드라이브 중 편하게 들를 식사 장소' },
+        { name: '전망 카페', description: '카페 · 풍경을 보며 쉬어갈 수 있는 곳' }
+      ];
+      let activeStops = [];
+      let activeOwner = null;
+      let pendingRouteAt = 0;
+      let pendingOwner = null;
+      let applyingStops = null;
+      let applyingOwner = null;
+      let applyingUntil = 0;
+      let routeTimer;
+      let replacement = null;
+      let replacementTimer;
+      function persistNativeState() {
+        if (!nativeHost) return;
+        try {
+          nativeHost.saveState(JSON.stringify({
+            conversation: window.sessionStorage.getItem(historyKey), route: window.sessionStorage.getItem(routeKey),
+            draft: prompt.value, mode, auto: toggle.getAttribute('aria-checked') === 'true', group,
+            groupNameDraft: document.getElementById('group-name').value
+          }));
+        } catch { /* The current screen remains usable without checkpoints. */ }
+      }
+      function routeOwner(turn) { return turn.mode === 'group' ? 'group:' + turn.groupId : 'personal'; }
+      function routeOwnerLabel() {
+        if (activeOwner === 'personal') return '개인';
+        const id = activeOwner?.slice(6);
+        return group?.id === id ? group.name
+          : turns.find(turn => turn.mode === 'group' && turn.groupId === id)?.groupName
+            || (mockGroup.id === id ? mockGroup.name : '그룹');
+      }
+      function persistRoute() {
+        try { window.sessionStorage.setItem(routeKey, JSON.stringify({ stops: activeStops, owner: activeOwner, pendingAt: pendingRouteAt, pendingOwner, applyingStops, applyingOwner, applyingUntil, replacement })); }
+        catch { /* Route interaction remains available without browser storage. */ }
+        persistNativeState();
+      }
+      function applyRoute(stops, owner = activeOwner) {
+        clearTimeout(routeTimer);
+        activeStops = [...stops];
+        activeOwner = activeStops.length ? owner : null;
+        pendingRouteAt = 0;
+        pendingOwner = null;
+        applyingStops = null;
+        applyingOwner = null;
+        applyingUntil = 0;
+        renderRoute(activeStops.length ? { source: '추천받은 경로', stops: activeStops.map(index => dummyPlaces[index].name) } : null);
+        persistRoute();
+      }
+      function beginRouteApply(stops, owner, readyAt = Date.now() + 2000) {
+        clearTimeout(routeTimer);
+        pendingRouteAt = 0;
+        pendingOwner = null;
+        applyingStops = [...stops];
+        applyingOwner = owner;
+        applyingUntil = readyAt;
+        document.getElementById('route-empty').hidden = true;
+        document.getElementById('route-active').hidden = true;
+        document.getElementById('route-loading').hidden = false;
+        document.getElementById('route-owner').hidden = true;
+        document.getElementById('route-timeline').replaceChildren();
+        document.getElementById('route-status').textContent = '네비게이션에 반영중입니다';
+        persistRoute();
+        routeTimer = setTimeout(() => applyRoute(stops, owner), Math.max(0, readyAt - Date.now()));
+      }
+      function finishReplacement(accepted) {
+        if (!replacement) return;
+        const request = replacement;
+        replacement = null;
+        clearTimeout(replacementTimer);
+        routeConfirm.close();
+        if (accepted) beginRouteApply(request.stops, request.owner);
+        else {
+          document.getElementById('route-status').textContent = '새 경로를 거절했어요. 기존 경로를 유지해요.';
+          persistRoute();
+        }
+      }
+      function updateCountdown() {
+        if (!replacement) return;
+        const remaining = Math.max(0, Math.ceil((replacement.deadline - Date.now()) / 1000));
+        document.getElementById('route-countdown').textContent = String(remaining);
+        if (!remaining) { finishReplacement(true); return; }
+        replacementTimer = setTimeout(updateCountdown, Math.min(1000, replacement.deadline - Date.now()));
+      }
+      function requestRoute(stops, owner, deadline = Date.now() + 10000) {
+        clearTimeout(replacementTimer);
+        replacement = null;
+        if (routeConfirm.open) routeConfirm.close();
+        applyRoute(activeStops);
+        if (!activeStops.length || activeOwner === owner) { beginRouteApply(stops, owner); return; }
+        replacement = { stops: [...stops], owner, deadline };
+        persistRoute();
+        routeConfirm.showModal();
+        updateCountdown();
+      }
+      function scheduleRoute(readyAt, owner) {
+        applyRoute(activeStops);
+        pendingRouteAt = readyAt;
+        pendingOwner = owner;
+        persistRoute();
+        routeTimer = setTimeout(() => requestRoute(dummyPlaces.map((place, index) => index), owner), Math.max(0, readyAt - Date.now()));
+      }
+      function renderRoute(route) {
+        document.getElementById('route-loading').hidden = true;
+        document.getElementById('route-empty').hidden = Boolean(route);
+        document.getElementById('route-active').hidden = !route;
+        const ownerLabel = route ? routeOwnerLabel() : '';
+        document.getElementById('route-owner').hidden = !route;
+        document.getElementById('route-owner').textContent = ownerLabel;
+        document.getElementById('route-source').textContent = route ? route.source : '';
+        const timeline = document.getElementById('route-timeline');
+        timeline.replaceChildren();
+        if (route) ['대전 유성구', ...route.stops].forEach((name, index) => {
+          const point = document.createElement('li');
+          point.className = 'route-point';
+          if (index === 0) point.setAttribute('aria-current', 'location');
+          const label = document.createElement('p');
+          label.className = 'route-point-label';
+          label.textContent = index === 0 ? '현재 위치' : index === route.stops.length ? '목적지' : '경유지 ' + index;
+          const title = document.createElement('p');
+          title.className = 'route-point-name';
+          title.textContent = name;
+          point.append(label, title);
+          timeline.append(point);
+        });
+        document.getElementById('route-status').textContent = route
+          ? ownerLabel + ' · ' + route.source + ' 안내 중. 목적지 ' + route.stops[route.stops.length - 1]
+          : '안내 중인 경로가 없어요';
+      }
+      function appendTurn(turn) {
+        const article = document.createElement('article');
+        article.className = 'turn';
+        const request = document.createElement('div');
+        request.className = 'user-message';
+        const meta = document.createElement('p');
+        meta.className = 'user-meta';
+        meta.textContent = turn.mode === 'group' ? '나 · ' + turn.groupName : '나 · 개인 추천';
+        const text = document.createElement('p');
+        text.className = 'user-text';
+        text.textContent = turn.text;
+        request.append(meta, text);
+        const reply = document.getElementById('reply-template').content.cloneNode(true);
+        const result = reply.querySelector('.result');
+        const body = reply.querySelector('.reply-body');
+        const choices = reply.querySelector('.place-list');
+        const preview = reply.querySelector('.route-preview');
+        reply.querySelector('.result-title').textContent = turn.auto ? '추천 경로' : '추천 장소';
+        choices.hidden = turn.auto;
+        preview.hidden = !turn.auto;
+        dummyPlaces.forEach((place, index) => {
+          if (turn.auto) {
+            const stop = document.createElement('div');
+            stop.className = 'route-stop';
+            const number = document.createElement('span');
+            number.textContent = index + 1;
+            stop.append(number, place.name);
+            preview.append(stop);
+          } else {
+            const item = document.createElement('li');
+            const choice = document.getElementById('place-template').content.cloneNode(true);
+            choice.querySelector('.place-name').textContent = place.name;
+            choice.querySelector('.place-description').textContent = place.description;
+            const button = choice.querySelector('.place-choice');
+            button.setAttribute('aria-label', place.name + ' 경로 설정');
+            button.addEventListener('click', () => {
+              if (Date.now() < turn.readyAt || !conversation.contains(article)) return;
+              requestRoute([index], routeOwner(turn));
+            });
+            item.append(choice);
+            choices.append(item);
+          }
+        });
+        reply.querySelector('.result-copy').textContent = turn.auto
+          ? '추천 장소 3곳을 차례로 들르는 경로예요.'
+          : '원하는 장소를 선택해 경로를 설정해요.';
+        article.append(request, reply);
+        conversation.append(article);
+        conversation.hidden = false;
+        document.getElementById('content').classList.add('has-conversation');
+        document.getElementById('empty-intro').inert = true;
+        document.getElementById('empty-intro').setAttribute('aria-hidden', 'true');
+        const wait = Math.max(0, (turn.readyAt || 0) - Date.now());
+        if (wait > 0) {
+          result.classList.add('is-loading');
+          result.setAttribute('aria-busy', 'true');
+          body.setAttribute('aria-hidden', 'true');
+          body.inert = true;
+          setTimeout(() => {
+            if (!conversation.contains(article)) return;
+            result.classList.remove('is-loading');
+            result.setAttribute('aria-busy', 'false');
+            body.setAttribute('aria-hidden', 'false');
+            body.inert = false;
+            conversation.scrollTo({ top: conversation.scrollHeight });
+          }, wait);
+        }
+        body.addEventListener('transitionend', () => {
+          if (conversation.contains(article)) conversation.scrollTo({ top: conversation.scrollHeight });
+        }, { once: true });
+      }
+      function submitPrompt() {
+        if (!prompt.value.trim() || recognition) return;
+        if (mode === 'group' && !group) { setMode('group'); return; }
+        const turn = { text: prompt.value, mode, auto: toggle.getAttribute('aria-checked') === 'true', readyAt: Date.now() + 3000 };
+        if (mode === 'group') { turn.groupId = group.id; turn.groupName = group.name; }
+        appendTurn(turn);
+        turns.push(turn);
+        try { window.sessionStorage.setItem(historyKey, JSON.stringify(turns)); }
+        catch { /* The current conversation remains visible if browser storage is unavailable. */ }
+        if (turn.auto) scheduleRoute(turn.readyAt, routeOwner(turn));
+        prompt.value = '';
+        voiceStatus.hidden = true;
+        updateSend();
+        conversation.scrollTo({ top: conversation.scrollHeight });
+        persistNativeState();
+      }
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem(historyKey) || '[]');
+        if (Array.isArray(saved)) saved.forEach(turn => {
+          if (!turn || typeof turn.text !== 'string' || !turn.text.trim() || turn.text.length > prompt.maxLength
+              || !['personal', 'group'].includes(turn.mode) || typeof turn.auto !== 'boolean') return;
+          if (turn.mode === 'group') {
+            if (turn.groupId === undefined) { turn.groupId = mockGroup.id; turn.groupName = mockGroup.name; }
+            if (typeof turn.groupId !== 'string' || typeof turn.groupName !== 'string') return;
+          }
+          turn.readyAt = Number.isFinite(turn.readyAt) ? Math.min(turn.readyAt, Date.now() + 3000) : 0;
+          turns.push(turn);
+        });
+      } catch { /* Browser storage is optional for this standalone preview. */ }
+      function renderConversation() {
+        conversation.replaceChildren();
+        conversation.hidden = true;
+        document.getElementById('content').classList.remove('has-conversation');
+        document.getElementById('empty-intro').inert = false;
+        document.getElementById('empty-intro').setAttribute('aria-hidden', 'false');
+        turns.filter(turn => turn.mode === mode && (mode !== 'group' || turn.groupId === group?.id)).forEach(appendTurn);
+        conversation.scrollTop = conversation.scrollHeight;
+      }
+      function setMode(nextMode) {
+        stopVoice();
+        mode = nextMode;
+        const needsGroup = mode === 'group' && !group;
+        document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
+        document.getElementById('content').hidden = needsGroup;
+        document.getElementById('group-create').hidden = !needsGroup;
+        document.getElementById('context-label').setAttribute('aria-hidden', String(mode === 'personal'));
+        if (mode === 'group') {
+          document.getElementById('context-title').textContent = group ? group.name : '그룹 생성';
+          const count = document.getElementById('context-count');
+          count.hidden = !group;
+          count.textContent = group ? '차량 ' + group.vehicles.length + '대' : '';
+          const members = document.getElementById('context-members');
+          members.hidden = !group;
+          members.textContent = group ? group.members.join(' · ') : '';
+        }
+        updateCopy();
+        renderConversation();
+        persistNativeState();
+      }
+      function updateCopy() {
+        const auto = toggle.getAttribute('aria-checked') === 'true';
+        autoCopy.textContent = auto
+          ? '최대한 빠르게 경로를 설정해줘요.'
+          : '추천 경로를 직접 선택해요.';
+      }
+      function updateSend() { send.disabled = !prompt.value.trim() || recognition !== null; }
+      function showVoiceStatus(message) {
+        voiceMessage.textContent = message;
+        voiceStatus.hidden = false;
+      }
+      function resetVoiceStyle() {
+        voice.setAttribute('aria-pressed', 'false');
+        voice.setAttribute('aria-label', '음성으로 입력하기');
+        voice.classList.remove('recording', 'processing');
+      }
+      function stopVoice(restore = true) {
+        const active = recognition;
+        recognition = null;
+        if (active) {
+          if (restore) prompt.value = voiceBefore;
+          active.abort();
+        }
+        resetVoiceStyle();
+        voiceStatus.hidden = true;
+        updateSend();
+      }
+      function startVoice() {
+        if (mode === 'group' && !group) { setMode('group'); return; }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        resetVoiceStyle();
+        if (!SpeechRecognition) {
+          showVoiceStatus('이 브라우저는 음성 입력을 지원하지 않아요. Chrome에서 열거나 직접 입력해주세요.');
+          return;
+        }
+        let active;
+        try { active = new SpeechRecognition(); }
+        catch { showVoiceStatus('음성 입력을 시작하지 못했어요. 직접 입력하거나 잠시 후 다시 시도해주세요.'); return; }
+        recognition = active;
+        voiceBefore = prompt.value;
+        const prefix = voiceBefore.trim();
+        const merge = text => (prefix ? prefix + ' ' + text : text).slice(0, prompt.maxLength);
+        let finalTranscript = '';
+        let failed = false;
+        active.lang = 'ko-KR';
+        active.continuous = false;
+        active.interimResults = true;
+        active.maxAlternatives = 1;
+        voice.setAttribute('aria-pressed', 'true');
+        voice.setAttribute('aria-label', '음성 입력 취소');
+        voice.classList.add('processing');
+        showVoiceStatus('마이크를 연결하고 있어요. 권한 요청이 표시되면 허용해주세요.');
+        updateSend();
+        active.onstart = () => {
+          if (recognition !== active) return;
+          voice.classList.remove('processing');
+          voice.classList.add('recording');
+          showVoiceStatus('듣고 있어요. 말을 마치면 자동으로 전송돼요.');
+        };
+        active.onresult = event => {
+          if (recognition !== active) return;
+          const results = Array.from(event.results);
+          const transcript = results.map(item => item[0].transcript).join(' ').trim();
+          finalTranscript = results.filter(item => item.isFinal).map(item => item[0].transcript).join(' ').trim();
+          prompt.value = transcript ? merge(transcript) : voiceBefore;
+          updateSend();
+        };
+        active.onspeechend = () => {
+          if (recognition !== active) return;
+          voice.classList.remove('recording');
+          voice.classList.add('processing');
+          showVoiceStatus('말씀하신 내용을 정리하고 있어요.');
+          active.stop();
+        };
+        active.onerror = event => {
+          if (recognition !== active) return;
+          failed = true;
+          const errors = {
+            'not-allowed': '마이크 권한이 필요해요. 브라우저에서 권한을 허용한 뒤 다시 눌러주세요.',
+            'service-not-allowed': '브라우저에서 음성 인식 서비스를 사용할 수 없어요. 직접 입력해주세요.',
+            'audio-capture': '사용할 수 있는 마이크를 찾지 못했어요. 마이크 연결을 확인해주세요.',
+            'no-speech': '음성을 듣지 못했어요. 마이크를 누르고 다시 말씀해주세요.',
+            'network': '음성 인식 연결이 끊겼어요. 인터넷 연결을 확인하고 다시 시도해주세요.'
+          };
+          showVoiceStatus(event.message || errors[event.error] || '음성 입력을 완료하지 못했어요. 다시 시도하거나 직접 입력해주세요.');
+        };
+        active.onend = () => {
+          if (recognition !== active) return;
+          recognition = null;
+          resetVoiceStyle();
+          if (failed || !finalTranscript) {
+            prompt.value = voiceBefore;
+            if (!failed) showVoiceStatus('음성을 듣지 못했어요. 마이크를 누르고 다시 말씀해주세요.');
+          } else {
+            prompt.value = merge(finalTranscript);
+            submitPrompt();
+            showVoiceStatus('음성 요청을 전송했어요.');
+          }
+          updateSend();
+        };
+        try { active.start(); }
+        catch {
+          stopVoice();
+          showVoiceStatus('음성 입력을 시작하지 못했어요. 권한과 인터넷 연결을 확인해주세요.');
+        }
+      }
+      prompt.addEventListener('input', () => { stopVoice(false); persistNativeState(); });
+      document.getElementById('group-name').addEventListener('input', persistNativeState);
+      window.addEventListener('pagehide', () => stopVoice());
+      window.addEventListener('codrive-pause', () => { stopVoice(); persistNativeState(); });
+      let drag = null;
+      let dragged = false;
+      function setAuto(checked) {
+        toggle.setAttribute('aria-checked', String(checked));
+        updateCopy();
+        persistNativeState();
+      }
+      function endDrag() {
+        drag = null;
+        toggle.style.removeProperty('--thumb-x');
+        toggle.classList.remove('dragging');
+      }
+      toggle.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        dragged = false;
+        drag = { id: event.pointerId, x: event.clientX, start: toggle.getAttribute('aria-checked') === 'true' ? 22 : 0 };
+        drag.position = drag.start;
+        toggle.setPointerCapture(event.pointerId);
+      });
+      toggle.addEventListener('pointermove', event => {
+        if (!drag || drag.id !== event.pointerId) return;
+        const distance = event.clientX - drag.x;
+        if (!dragged && Math.abs(distance) < 4) return;
+        dragged = true;
+        drag.position = Math.max(0, Math.min(22, drag.start + distance));
+        toggle.classList.add('dragging');
+        toggle.style.setProperty('--thumb-x', drag.position + 'px');
+      });
+      toggle.addEventListener('pointerup', event => {
+        if (!drag || drag.id !== event.pointerId) return;
+        if (dragged) setAuto(drag.position >= 11);
+        endDrag();
+      });
+      toggle.addEventListener('pointercancel', () => { dragged = false; endDrag(); });
+      toggle.addEventListener('lostpointercapture', () => {
+        if (drag) { dragged = false; endDrag(); }
+      });
+      toggle.addEventListener('click', event => {
+        if (dragged && event.detail !== 0) { dragged = false; return; }
+        dragged = false;
+        setAuto(toggle.getAttribute('aria-checked') !== 'true');
+      });
+      document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+        setMode(button.dataset.mode);
+      }));
+      document.getElementById('back-personal').addEventListener('click', () => setMode('personal'));
+      document.getElementById('group-create-form').addEventListener('submit', event => {
+        event.preventDefault();
+        const name = document.getElementById('group-name').value.trim();
+        if (!name || name.length > 30) {
+          document.getElementById('group-create-error').textContent = '그룹 이름을 1~30자로 입력해주세요.';
+          return;
+        }
+        group = { ...mockGroup, id: 'preview-' + name, name };
+        document.getElementById('group-create-error').textContent = '';
+        setMode('group');
+      });
+      document.querySelectorAll('[data-example]').forEach(button => button.addEventListener('click', () => {
+        stopVoice();
+        prompt.value = button.dataset.example;
+        updateSend();
+        submitPrompt();
+      }));
+      voice.addEventListener('click', () => {
+        if (recognition) {
+          stopVoice();
+          showVoiceStatus('음성 입력을 취소했어요.');
+        } else {
+          startVoice();
+        }
+      });
+      document.getElementById('prompt-form').addEventListener('submit', event => {
+        event.preventDefault();
+        submitPrompt();
+      });
+      document.getElementById('route-accept').addEventListener('click', () => finishReplacement(true));
+      document.getElementById('route-reject').addEventListener('click', () => finishReplacement(false));
+      routeConfirm.addEventListener('cancel', event => { event.preventDefault(); finishReplacement(false); });
+      let savedStops = [];
+      let savedOwner = 'personal';
+      let savedPendingAt = 0;
+      let savedPendingOwner = 'personal';
+      let savedApplyingStops = null;
+      let savedApplyingOwner = 'personal';
+      let savedApplyingUntil = 0;
+      let savedReplacement = null;
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem(routeKey) || 'null');
+        const validStops = stops => Array.isArray(stops) && stops.length <= dummyPlaces.length
+          && stops.every(index => Number.isInteger(index) && index >= 0 && index < dummyPlaces.length);
+        const validOwner = owner => typeof owner === 'string' && (owner === 'personal' || (owner.startsWith('group:') && owner.length > 6));
+        if (saved && validStops(saved.stops)) {
+          savedStops = saved.stops;
+          if (validOwner(saved.owner)) savedOwner = saved.owner;
+          savedPendingAt = Number.isFinite(saved.pendingAt) && saved.pendingAt > 0 ? Math.min(saved.pendingAt, Date.now() + 3000) : 0;
+          if (validOwner(saved.pendingOwner)) savedPendingOwner = saved.pendingOwner;
+          if (validStops(saved.applyingStops) && saved.applyingStops.length
+              && Number.isFinite(saved.applyingUntil) && saved.applyingUntil > 0) {
+            savedApplyingStops = saved.applyingStops;
+            if (validOwner(saved.applyingOwner)) savedApplyingOwner = saved.applyingOwner;
+            savedApplyingUntil = Math.min(saved.applyingUntil, Date.now() + 2000);
+          }
+          const request = saved.replacement;
+          if (request && validStops(request.stops) && request.stops.length && validOwner(request.owner)
+              && Number.isFinite(request.deadline) && request.deadline > 0) {
+            savedReplacement = { stops: request.stops, owner: request.owner, deadline: Math.min(request.deadline, Date.now() + 10000) };
+          }
+        }
+      } catch { /* A new preview starts without an active route. */ }
+      if (nativeHost) {
+        prompt.value = typeof appState.draft === 'string' ? appState.draft.slice(0, prompt.maxLength) : '';
+        document.getElementById('group-name').value = typeof appState.groupNameDraft === 'string' ? appState.groupNameDraft.slice(0, 30) : '';
+        toggle.setAttribute('aria-checked', String(appState.auto === true));
+      }
+      applyRoute(savedStops, savedOwner);
+      if (savedReplacement) requestRoute(savedReplacement.stops, savedReplacement.owner, savedReplacement.deadline);
+      else if (savedApplyingStops) beginRouteApply(savedApplyingStops, savedApplyingOwner, savedApplyingUntil);
+      else if (savedPendingAt) scheduleRoute(savedPendingAt, savedPendingOwner);
+      setMode(nativeHost && appState.mode === 'group' ? 'group' : 'personal');
+      updateSend();
+    })();
+  </script>
+</body>
+</html>

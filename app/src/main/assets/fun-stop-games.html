@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CoDrive · 톨비·주차비 정하기</title>
+  <style>
+    /* ---- route-recommendation.html 에서 복사한 공통 골격 (이 화면에 필요한 규칙만, 값 변경 없음) ---- */
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+      color: #24221e; background: #f3f0e9; color-scheme: light;
+      --accent: #24221e; --on-accent: #fffdf8; --muted: #706c64; --line: #d7d1c7; --surface: #fffdf8;
+      --message-radius: 41px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 140ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out; }
+    button:not(:disabled):active { transform: scale(.96); filter: brightness(.94); box-shadow: inset 0 2px 4px #24221e20; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .shell { height: 100dvh; display: grid; grid-template-columns: 220px 280px minmax(0, 1fr); background: #f3f0e9; }
+    .sidebar { width: 220px; padding: 32px 16px; flex-shrink: 0; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .brand { margin: 0 12px 40px; font-size: 26px; font-weight: 700; letter-spacing: -.7px; }
+    .nav { display: grid; gap: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 14px 12px; border-radius: 6px; font-size: 18px; color: #aaa7a0; }
+    .main { min-width: 0; min-height: 0; flex: 1; padding: 28px 40px 24px; display: flex; flex-direction: column; overflow-y: auto; }
+    .top { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+    .breadcrumb { min-width: 0; margin-right: auto; display: grid; gap: 6px; font-size: 24px; font-weight: 600; opacity: 0; transform: translateX(-20px); visibility: hidden; transition: opacity 240ms ease-out, transform 320ms cubic-bezier(.22, 1, .36, 1), visibility 0s 320ms; }
+    .breadcrumb[aria-hidden="false"] { opacity: 1; transform: translateX(0); visibility: visible; transition-delay: 0s; }
+    .context-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; }
+    .context-title { min-width: 0; overflow-wrap: anywhere; }
+    .group-count { color: var(--muted); font-size: 18px; font-weight: 400; white-space: nowrap; }
+    .group-members { color: var(--muted); font-size: 16px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+    .mode-control { display: flex; flex-shrink: 0; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; }
+    .mode-control button { min-height: 64px; padding: 12px 24px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 18px; }
+    .mode-control button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    @keyframes conversation-enter { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reply-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .route-sidebar { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 32px 24px; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .route-header { display: flex; align-items: center; gap: 12px; }
+    .route-header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+    .route-owner { margin: 8px 0 0 36px; color: #aaa7a0; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .route-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 0; text-align: center; color: #aaa7a0; animation: conversation-enter 240ms ease-out; }
+    .route-empty > svg { width: 32px; height: 32px; }
+    .route-empty p { margin: 0; font-size: 18px; line-height: 1.6; word-break: keep-all; }
+    .route-active { margin-top: 32px; animation: conversation-enter 240ms ease-out; }
+    .route-source { margin: 0 0 28px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-timeline { margin: 0; padding: 0; list-style: none; }
+    .route-point { position: relative; padding: 0 0 36px 32px; }
+    .route-point::before { position: absolute; z-index: 1; left: 3px; top: 6px; width: 10px; height: 10px; border: 2px solid #aaa7a0; border-radius: 50%; background: #151515; content: ""; }
+    .route-point:not(:last-child)::after { position: absolute; left: 8px; top: 16px; bottom: -6px; width: 1px; background: #393938; content: ""; }
+    .route-point:first-child::before { border-color: #f3f0e9; background: #f3f0e9; box-shadow: 0 0 0 4px #393938; }
+    .route-point:last-child { padding-bottom: 0; }
+    .route-point:last-child::before { top: 0; width: 24px; height: 24px; border: 0; border-radius: 0; background: #f3f0e9; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .route-point-label { margin: 0 0 8px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-point-name { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+    h1 { margin: 0 0 24px; font-size: 28px; font-weight: 600; }
+
+    /* ---- 이 화면 전용 (공통 색상·곡률·간격만 사용) ---- */
+    .context-title { word-break: keep-all; } /* 긴 그룹 이름이 낱말 중간에서 끊기지 않게 */
+    .games { width: min(100%, 1040px); margin: 0 auto; padding: 24px 0; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    .games h1 { margin: 0; align-self: stretch; text-align: center; }
+    .purpose-control { align-self: center; }
+    #game-control button, .purpose-control button { white-space: nowrap; }
+    .safety { min-height: 26px; margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; text-align: center; word-break: keep-all; }
+    .safety svg { width: 20px; height: 20px; margin-right: 8px; vertical-align: -4px; }
+    .safety-count { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .board { width: min(100%, 640px); display: grid; justify-items: center; }
+    .wheel-frame { position: relative; width: min(100%, 400px); aspect-ratio: 1; margin-top: 16px; }
+    .wheel-pointer { position: absolute; z-index: 1; top: -16px; left: 50%; width: 28px; height: 24px; transform: translateX(-50%); color: var(--accent); }
+    .wheel-pointer svg { width: 28px; height: 24px; fill: var(--accent); stroke: var(--accent); }
+    .wheel-clip { width: 100%; height: 100%; overflow: hidden; border-radius: 50%; } /* 회전한 사각 상자가 틀 밖으로 넘치지 않게 원으로 자른다 */
+    .wheel-rotor { position: relative; width: 100%; height: 100%; transform: rotate(var(--rotation, 0deg)); }
+    .wheel-rotor.spinning, .wheel-rotor.spinning .wheel-label { transition: transform var(--spin-ms, 4000ms) cubic-bezier(.22, 1, .36, 1), color 240ms ease-out; }
+    /* 이름은 바퀴와 같은 시간·곡선으로 반대로 돌아 항상 똑바로 읽힌다. */
+    .wheel-label { position: absolute; width: max-content; max-width: 34%; color: var(--accent); font-size: 18px; font-weight: 600; line-height: 1.3; text-align: center; word-break: keep-all; overflow-wrap: anywhere; transform: translate(-50%, -50%) rotate(calc(-1 * var(--rotation, 0deg))); transition: color 240ms ease-out; }
+    .wheel-label.is-winner { color: var(--on-accent); }
+    .wheel { width: 100%; height: 100%; stroke-width: 1; }
+    .wheel-segment { fill: var(--surface); stroke: var(--line); transition: fill 240ms ease-out; }
+    .wheel-segment.is-winner { fill: var(--accent); }
+    .wheel-hub { fill: var(--accent); stroke: none; }
+    .ladder { width: 100%; display: grid; gap: 8px; }
+    .ladder-row { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+    .ladder-row li { min-width: 0; display: flex; justify-content: center; padding: 0 4px; text-align: center; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .ladder-top li { font-weight: 600; }
+    .ladder-top li.is-winner { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+    .ladder-slot { min-height: 40px; align-items: center; padding: 6px 16px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); transition: background-color 240ms ease-out, color 240ms ease-out; }
+    .ladder-bottom li { padding: 0 6px; }
+    .ladder-bottom li > span { width: 100%; display: flex; justify-content: center; }
+    .ladder-slot.is-pay { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .ladder-slot.is-winner { color: var(--on-accent); background: var(--accent); }
+    .ladder-svg { width: 100%; height: auto; display: block; stroke-width: 1.2; }
+    .ladder-rail { stroke: var(--line); }
+    .ladder-rungs { stroke: var(--line); opacity: 0; transition: opacity 240ms ease-out; }
+    .ladder-rungs.shown { opacity: 1; }
+    .ladder-path { stroke: var(--muted); stroke-dasharray: 1; stroke-dashoffset: 1; }
+    .ladder-path.tracing { transition: stroke-dashoffset var(--trace-ms, 2600ms) cubic-bezier(.22, 1, .36, 1); stroke-dashoffset: 0; }
+    .ladder-path.done { stroke-dashoffset: 0; }
+    .ladder-path.is-winner { stroke: var(--accent); stroke-width: 3; }
+    .outcome:focus { outline: none; }
+    .outcome:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .outcome { width: min(100%, 640px); padding: 24px 32px; display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--message-radius); animation: reply-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
+    .outcome-icon { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: var(--on-accent); background: var(--accent); }
+    .outcome.is-stopped .outcome-icon { color: var(--accent); background: transparent; border: 1px solid var(--line); }
+    .outcome-text { min-width: 0; display: grid; gap: 6px; }
+    .outcome-title { margin: 0; color: var(--accent); font-size: 22px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+    .outcome-note { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+    .start { width: min(100%, 360px); min-height: 64px; padding: 16px 24px; border: 1px solid var(--accent); border-radius: 6px; color: var(--on-accent); background: var(--accent); font-size: 18px; font-weight: 600; }
+    .start:not(:disabled):hover { background: #403d37; }
+    .start:disabled { cursor: default; color: var(--muted); background: #e6e0d7; border-color: #e6e0d7; }
+    .no-group { width: min(100%, 620px); margin: 56px auto auto; display: grid; justify-items: center; gap: 16px; text-align: center; }
+    .no-group > svg { width: 32px; height: 32px; color: var(--muted); }
+    .no-group p { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.6; word-break: keep-all; }
+    .no-group .no-group-title { color: var(--accent); font-size: 22px; font-weight: 600; }
+
+    /* ---- route-recommendation.html 에서 복사한 반응형 규칙 ---- */
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 80px 220px minmax(0, 1fr); }
+      .sidebar { width: 80px; padding: 28px 12px; }
+      .brand { margin: 0 0 36px; text-align: center; font-size: 22px; }
+      .brand-full, .nav-item span { display: none; }
+      .nav-item { justify-content: center; padding: 14px 0; }
+      .main { padding: 24px; }
+      .breadcrumb { font-size: 22px; }
+      .route-sidebar { padding: 28px 20px; }
+    }
+    @media (min-width: 1101px) { .brand-short { display: none; } }
+    @media (max-width: 900px) {
+      .top { gap: 20px; }
+      .mode-control button { flex: 1; }
+    }
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 80px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .sidebar { grid-column: 1; grid-row: 1 / -1; }
+      .main { grid-column: 2; grid-row: 1; }
+      .route-sidebar { grid-column: 2; grid-row: 2; max-height: 32dvh; padding: 20px 24px; border-right: 0; border-top: 1px solid #393938; }
+      .route-empty { flex-direction: row; justify-content: flex-start; padding: 16px 0 0; text-align: left; }
+      .route-active { margin-top: 20px; }
+      .route-source { margin-bottom: 20px; }
+    }
+    @media (max-width: 600px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .main, .route-sidebar { grid-column: 1; }
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      .top { flex-wrap: wrap; }
+      .outcome { padding: 20px 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button, .breadcrumb, .wheel-rotor.spinning, .wheel-rotor.spinning .wheel-label, .wheel-segment, .wheel-label, .ladder-rungs, .ladder-path.tracing, .ladder-slot { transition: none; }
+      .route-empty, .route-active, .outcome { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></symbol>
+      <symbol id="i-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.8 7.5M3 4v7h7m2-4v6l4 2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+      <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12m6-12v12"/></symbol>
+    </defs>
+  </svg>
+  <div class="shell">
+    <!-- 사이드 메뉴: route-recommendation.html 과 같은 항목. 이 화면은 메뉴 없이 진입하므로 선택 항목이 없다. -->
+    <aside class="sidebar" aria-label="주요 메뉴">
+      <div class="brand"><span class="brand-full">CoDrive</span><span class="brand-short">Co</span></div>
+      <nav class="nav" aria-label="화면 구성 미리보기">
+        <div class="nav-item" aria-label="여행 시작, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-home"/></svg><span>여행 시작</span></div>
+        <div class="nav-item" aria-label="우리 그룹, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-group"/></svg><span>우리 그룹</span></div>
+        <div class="nav-item" aria-label="실시간 주행, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-pin"/></svg><span>실시간 주행</span></div>
+        <div class="nav-item" aria-label="AI 경로 추천"><svg aria-hidden="true"><use href="#i-route"/></svg><span>AI 경로 추천</span></div>
+        <div class="nav-item" aria-label="음성 채널, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>음성 채널</span></div>
+        <div class="nav-item" aria-label="여행 기록, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-history"/></svg><span>여행 기록</span></div>
+      </nav>
+    </aside>
+    <aside class="route-sidebar" aria-labelledby="route-heading">
+      <header class="route-header"><svg aria-hidden="true"><use href="#i-route"/></svg><h2 id="route-heading">현재 경로</h2></header>
+      <p class="route-owner" id="route-owner" hidden></p>
+      <div class="route-empty" id="route-empty"><svg aria-hidden="true"><use href="#i-pin"/></svg><p>안내 중인 경로가 없어요</p></div>
+      <div class="route-active" id="route-active" hidden>
+        <p class="route-source" id="route-source"></p>
+        <ol class="route-timeline" id="route-timeline" aria-label="현재 위치부터 목적지까지"></ol>
+      </div>
+    </aside>
+    <main class="main" id="main" data-game-state="idle" data-locked="true">
+      <header class="top">
+        <div class="breadcrumb" id="context-label" aria-hidden="true">
+          <div class="context-heading"><span class="context-title" id="context-title"></span><span class="group-count" id="context-count"></span></div>
+          <span class="group-members" id="context-members"></span>
+        </div>
+        <div class="mode-control" id="game-control" role="group" aria-label="정하는 방법" hidden>
+          <button type="button" data-game="ROULETTE" aria-pressed="true">룰렛</button>
+          <button type="button" data-game="LADDER" aria-pressed="false">사다리타기</button>
+        </div>
+      </header>
+      <section class="games" id="games" aria-labelledby="heading" hidden>
+        <h1 id="heading">누가 낼지 정해요</h1>
+        <div class="mode-control purpose-control" id="purpose-control" role="group" aria-label="정할 비용">
+          <button type="button" data-purpose="TOLL" aria-pressed="true">톨비</button>
+          <button type="button" data-purpose="PARKING" aria-pressed="false">주차비</button>
+        </div>
+        <p class="safety" id="safety" aria-hidden="true"><svg><use id="safety-icon" href="#i-lock"/></svg><span id="safety-text"></span></p>
+        <p class="sr-only" id="safety-status" role="status"></p>
+        <div class="board" id="board"></div>
+        <section class="outcome" id="outcome" role="status" tabindex="-1" hidden>
+          <span class="outcome-icon" aria-hidden="true"><svg><use id="outcome-icon" href="#i-check"/></svg></span>
+          <div class="outcome-text"><p class="outcome-title" id="outcome-title"></p><p class="outcome-note" id="outcome-note"></p></div>
+        </section>
+        <button class="start" id="start" type="button" disabled>룰렛 돌리기</button>
+      </section>
+      <section class="no-group" id="no-group" aria-labelledby="no-group-title" hidden>
+        <svg aria-hidden="true"><use href="#i-group"/></svg>
+        <p class="no-group-title" id="no-group-title">함께하는 그룹이 없어요</p>
+        <p>그룹에 참여하면 톨비와 주차비를 함께 정할 수 있어요.</p>
+      </section>
+    </main>
+  </div>
+  <script src="js/measurement.js"></script>
+  <script src="js/mock-scenario.js"></script>
+  <script src="js/vehicle.js"></script>
+  <script src="js/navi.js"></script>
+  <script src="js/fun-shell.js"></script>
+  <script src="js/group.js"></script>
+  <script src="js/play-safety.js"></script>
+  <script src="js/trip-log.js"></script>
+  <script src="js/dev-panel.js"></script> <!-- ?dev=1 일 때만 시연 패널 표시 -->
+  <script>
+    (() => {
+      'use strict';
+      // 차량·도착·그룹 데이터는 모듈 함수로만 가져온다. 이 화면은 값을 직접 만들지 않는다.
+      const { CoDriveGroup: group, CoDrivePlaySafety: safety, CoDriveTripLog: tripLog } = window;
+      const STORAGE_KEY = 'codrive.fun.stop-games.v1';
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const GAMES = {
+        ROULETTE: { label: '룰렛', action: '룰렛 돌리기', ms: 4000 },
+        LADDER: { label: '사다리타기', action: '사다리 타기', ms: 2600 }
+      };
+      const PURPOSES = { TOLL: '톨비', PARKING: '주차비' };
+      const LOCK_TEXT = {
+        MOVING: '주행 중에는 사용할 수 없어요. 도착하거나 2분 넘게 정차하면 열려요.',
+        STOPPED_SHORT: '정차한 지 2분이 지나면 사용할 수 있어요.',
+        UNKNOWN: '차량 상태를 확인할 수 없어 잠겨 있어요.'
+      };
+      const STOP_TEXT = {
+        MOVING: '차량이 움직여서 멈췄어요.',
+        UNKNOWN: '차량 상태를 확인할 수 없어 멈췄어요.'
+      };
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const $ = id => document.getElementById(id);
+      const main = $('main');
+      const startButton = $('start');
+
+      let prefs = { game: 'ROULETTE', purpose: 'TOLL', last: null };
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || 'null');
+        if (saved && Object.hasOwn(GAMES, saved.game) && Object.hasOwn(PURPOSES, saved.purpose)) {
+          prefs = { game: saved.game, purpose: saved.purpose, last: typeof saved.last?.title === 'string' ? saved.last : null };
+        }
+      } catch { /* 저장 상태가 없으면 기본 선택으로 시작한다. */ }
+      function savePrefs() {
+        try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); }
+        catch { /* 저장 없이도 화면은 동작한다. */ }
+      }
+
+      let vehicles = [];
+      let vehicleKey = '';
+      let locked = true;
+      let lockReason = null;
+      let safetySeq = 0;
+      let running = null;   // { token, game, purpose, winner, timer, ladder }
+      let nextToken = 0;
+      let rotation = 0;     // 룰렛의 누적 회전 각도(도)
+      let ladder = null;    // 현재 그려진 사다리 { slots, rungs, payIndex }
+
+      // ---- 공통 ----
+      const randomInt = max => {
+        const value = new Uint32Array(1);
+        window.crypto.getRandomValues(value);
+        return value[0] % max;
+      };
+      // 마지막 글자의 받침으로 이/가, 은/는을 고른다. 한글이 아니면 '이(가)'·'은(는)'.
+      function particle(word, withFinal, withoutFinal) {
+        const code = word.charCodeAt(word.length - 1) - 0xac00;
+        if (code < 0 || code > 11171) return withFinal + '(' + withoutFinal + ')';
+        return code % 28 ? withFinal : withoutFinal;
+      }
+      const sentence = (purpose, name) => {
+        const label = PURPOSES[purpose];
+        return label + particle(label, '은', '는') + ' ' + name + particle(name, '이', '가') + ' 내요';
+      };
+      const svg = (name, attrs = {}) => {
+        const node = document.createElementNS(SVG_NS, name);
+        for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+        return node;
+      };
+
+
+      // ---- 그룹 ----
+      async function renderGroup() {
+        const [info, list] = await Promise.all([group.getGroup(), group.getGroupVehicles()]);
+        const usable = info && list.length >= 2 ? list : [];
+        const key = JSON.stringify([info?.groupId, usable.map(vehicle => vehicle.vehicleId + ':' + vehicle.displayName)]);
+        if (key === vehicleKey) return;
+        if (running) return; // 진행 중인 게임의 참여 차량은 시작할 때 고정한다.
+        vehicleKey = key;
+        vehicles = usable.map(vehicle => ({ vehicleId: vehicle.vehicleId, displayName: vehicle.displayName }));
+        $('context-label').setAttribute('aria-hidden', String(!info));
+        $('context-title').textContent = info ? info.name : '';
+        $('context-count').textContent = info ? '차량 ' + info.vehicleCount + '대' : '';
+        $('context-members').textContent = vehicles.map(vehicle => vehicle.displayName).join(' · ');
+        const hasGame = vehicles.length >= 2;
+        $('games').hidden = !hasGame;
+        $('game-control').hidden = !hasGame;
+        $('no-group').hidden = hasGame;
+        if (info && !hasGame) {
+          $('no-group-title').textContent = '함께할 차량이 2대 이상이어야 해요';
+        }
+        resetBoard();
+      }
+
+      // ---- 잠금 (판단은 isSafeToPlay, 안내 문구는 getPlaySafety) ----
+      async function refreshSafety() {
+        const seq = ++safetySeq;
+        const safe = await safety.isSafeToPlay();
+        const detail = safe ? null : await safety.getPlaySafety();
+        if (seq !== safetySeq) return;
+        locked = !safe;
+        if (locked && running) stopGame(detail);
+        renderSafety(detail);
+      }
+      function renderSafety(detail) {
+        main.dataset.locked = String(locked);
+        $('safety-icon').setAttribute('href', locked ? '#i-lock' : '#i-unlock');
+        const reason = locked ? (detail && !detail.safe && LOCK_TEXT[detail.reason] ? detail.reason : 'UNKNOWN') : null;
+        const text = $('safety-text');
+        if (!locked) text.textContent = '지금 사용할 수 있어요.';
+        else if (reason === 'STOPPED_SHORT' && detail.waitSeconds != null) {
+          const count = document.createElement('span');
+          count.className = 'safety-count';
+          count.textContent = detail.waitSeconds + '초';
+          text.replaceChildren(LOCK_TEXT.STOPPED_SHORT + ' ', count, ' 남았어요.');
+        } else text.textContent = LOCK_TEXT[reason];
+        // 스크린리더에는 이유가 바뀔 때만 알린다. 남은 초를 매초 읽지 않는다.
+        if (reason !== lockReason) {
+          lockReason = reason;
+          $('safety-status').textContent = locked ? LOCK_TEXT[reason] : '지금 사용할 수 있어요.';
+        }
+        updateControls();
+      }
+      function updateControls() {
+        startButton.disabled = locked || !!running;
+        startButton.textContent = main.dataset.gameState === 'done' ? '다시 하기' : GAMES[prefs.game].action;
+        for (const button of document.querySelectorAll('[data-game], [data-purpose]')) button.disabled = !!running;
+      }
+
+      // ---- 결과 표시 ----
+      function showOutcome(kind, title, note) {
+        const outcome = $('outcome');
+        outcome.hidden = false;
+        outcome.classList.toggle('is-stopped', kind === 'stopped');
+        $('outcome-icon').setAttribute('href', kind === 'stopped' ? '#i-pause' : '#i-check');
+        $('outcome-title').textContent = title;
+        $('outcome-note').textContent = note;
+      }
+      function hideOutcome() { $('outcome').hidden = true; }
+
+      // ---- 룰렛 ----
+      function wedge(index, count) {
+        const span = 360 / count;
+        const point = angle => {
+          const radians = angle * Math.PI / 180;
+          return (Math.sin(radians) * 96).toFixed(3) + ' ' + (-Math.cos(radians) * 96).toFixed(3);
+        };
+        return 'M0 0 L' + point(index * span) + ' A96 96 0 ' + (span > 180 ? 1 : 0) + ' 1 ' + point((index + 1) * span) + ' Z';
+      }
+      function drawRoulette() {
+        const frame = document.createElement('div');
+        frame.className = 'wheel-frame';
+        frame.setAttribute('role', 'img');
+        frame.setAttribute('aria-label', '참여 차량 룰렛: ' + vehicles.map(vehicle => vehicle.displayName).join(', '));
+        const pointer = document.createElement('span');
+        pointer.className = 'wheel-pointer';
+        pointer.setAttribute('aria-hidden', 'true');
+        const pointerIcon = svg('svg', { viewBox: '0 0 28 24' });
+        pointerIcon.append(svg('path', { d: 'M4 3h20L14 21Z' }));
+        pointer.append(pointerIcon);
+        const rotor = document.createElement('div');
+        rotor.className = 'wheel-rotor';
+        rotor.id = 'wheel-rotor';
+        rotor.style.setProperty('--rotation', rotation + 'deg');
+        const wheel = svg('svg', { class: 'wheel', viewBox: '-100 -100 200 200', 'aria-hidden': 'true' });
+        const span = 360 / vehicles.length;
+        const labels = vehicles.map((vehicle, index) => {
+          wheel.append(svg('path', { class: 'wheel-segment', d: wedge(index, vehicles.length), 'data-index': String(index) }));
+          const middle = (index + .5) * span * Math.PI / 180;
+          const label = document.createElement('span');
+          label.className = 'wheel-label';
+          label.dataset.index = String(index);
+          label.setAttribute('aria-hidden', 'true');
+          label.style.left = (50 + Math.sin(middle) * 29) + '%';
+          label.style.top = (50 - Math.cos(middle) * 29) + '%';
+          label.textContent = vehicle.displayName;
+          return label;
+        });
+        wheel.append(svg('circle', { class: 'wheel-hub', r: '7' }));
+        rotor.append(wheel, ...labels);
+        const clip = document.createElement('div');
+        clip.className = 'wheel-clip';
+        clip.append(rotor);
+        frame.append(pointer, clip);
+        return frame;
+      }
+      // 포인터(위쪽)가 winner 칸 안쪽에 멈추도록 최종 각도를 정한다. 항상 시계 방향으로 5바퀴 이상 돈다.
+      function targetRotation(winner, count) {
+        const span = 360 / count;
+        const jitter = (randomInt(1000) / 1000 - .5) * span * .6;
+        const landing = (winner + .5) * span + jitter;     // 바퀴에서 포인터 아래에 와야 하는 각도
+        const base = rotation - (((rotation % 360) + 360) % 360) + 360 * 5;
+        return base + ((360 - landing) % 360 + 360) % 360;
+      }
+      function currentRotation(rotor) {
+        const transform = getComputedStyle(rotor).transform;
+        if (!transform || transform === 'none') return rotation;
+        const [a, b] = transform.match(/matrix\(([^)]+)\)/)[1].split(',').map(Number);
+        const angle = Math.atan2(b, a) * 180 / Math.PI;
+        return rotation - ((((rotation - angle) % 360) + 360) % 360);
+      }
+
+      // ---- 사다리 ----
+      const LADDER_LEVELS = 7;
+      function makeLadder(count) {
+        const rungs = [];
+        for (let level = 0; level < LADDER_LEVELS; level++) {
+          for (let gap = 0; gap < count - 1; gap++) {
+            const besideLeft = rungs.some(rung => rung.level === level && rung.gap === gap - 1);
+            if (!besideLeft && randomInt(2)) rungs.push({ level, gap });
+          }
+        }
+        // 모든 칸 사이에 가로줄이 최소 하나 있도록 보정한다.
+        for (let gap = 0; gap < count - 1; gap++) {
+          if (rungs.some(rung => rung.gap === gap)) continue;
+          for (let level = 0; level < LADDER_LEVELS; level++) {
+            if (!rungs.some(rung => rung.level === level && Math.abs(rung.gap - gap) <= 1)) { rungs.push({ level, gap }); break; }
+          }
+        }
+        return { rungs, payIndex: randomInt(count) };
+      }
+      const ladderX = column => 50 + column * 100;
+      const ladderY = level => 24 + level * (152 / (LADDER_LEVELS - 1));
+      function trace(start, rungs) {
+        let column = start;
+        const points = [[ladderX(column), 0]];
+        for (let level = 0; level < LADDER_LEVELS; level++) {
+          const next = rungs.some(rung => rung.level === level && rung.gap === column - 1) ? column - 1
+            : rungs.some(rung => rung.level === level && rung.gap === column) ? column + 1 : column;
+          if (next !== column) { points.push([ladderX(column), ladderY(level)], [ladderX(next), ladderY(level)]); column = next; }
+        }
+        points.push([ladderX(column), 200]);
+        return { end: column, d: 'M' + points.map(point => point.join(' ')).join(' L') };
+      }
+      function drawLadder() {
+        const count = vehicles.length;
+        ladder = makeLadder(count);
+        const wrap = document.createElement('div');
+        wrap.className = 'ladder';
+        wrap.style.setProperty('--cols', String(count));
+        const top = document.createElement('ol');
+        top.className = 'ladder-row ladder-top';
+        top.setAttribute('aria-label', '참여 차량');
+        vehicles.forEach(vehicle => { const item = document.createElement('li'); item.textContent = vehicle.displayName; top.append(item); });
+        const board = svg('svg', { class: 'ladder-svg', viewBox: '0 0 ' + count * 100 + ' 200', 'aria-hidden': 'true' });
+        const rails = svg('g', { class: 'ladder-rail' });
+        for (let column = 0; column < count; column++) rails.append(svg('line', { x1: ladderX(column), y1: 0, x2: ladderX(column), y2: 200 }));
+        const rungs = svg('g', { class: 'ladder-rungs', id: 'ladder-rungs' });
+        for (const rung of ladder.rungs) {
+          rungs.append(svg('line', { x1: ladderX(rung.gap), y1: ladderY(rung.level), x2: ladderX(rung.gap + 1), y2: ladderY(rung.level) }));
+        }
+        const paths = svg('g', { id: 'ladder-paths' });
+        board.append(rails, rungs, paths);
+        const bottom = document.createElement('ol');
+        bottom.className = 'ladder-row ladder-bottom';
+        bottom.setAttribute('aria-label', '결과 칸');
+        for (let column = 0; column < count; column++) {
+          const item = document.createElement('li');
+          const slot = document.createElement('span');
+          slot.className = 'ladder-slot' + (column === ladder.payIndex ? ' is-pay' : '');
+          slot.textContent = column === ladder.payIndex ? PURPOSES[prefs.purpose] : '통과';
+          item.append(slot);
+          bottom.append(item);
+        }
+        wrap.append(top, board, bottom);
+        return wrap;
+      }
+
+      // ---- 보드 ----
+      function resetBoard() {
+        main.dataset.gameState = prefs.last ? 'done' : 'idle';
+        const board = $('board');
+        board.replaceChildren();
+        if (vehicles.length >= 2) board.append(prefs.game === 'ROULETTE' ? drawRoulette() : drawLadder());
+        for (const button of document.querySelectorAll('[data-game]')) button.setAttribute('aria-pressed', String(button.dataset.game === prefs.game));
+        for (const button of document.querySelectorAll('[data-purpose]')) button.setAttribute('aria-pressed', String(button.dataset.purpose === prefs.purpose));
+        if (prefs.last) showOutcome('done', prefs.last.title, '여행 기록에 남겼어요.');
+        else hideOutcome();
+        updateControls();
+      }
+
+      async function startGame() {
+        if (running || vehicles.length < 2) return;
+        // 시작 직전에 다시 확인한다. 화면 표시가 늦게 갱신됐더라도 잠금 상태에서는 시작하지 않는다.
+        if (!(await safety.isSafeToPlay())) { await refreshSafety(); return; }
+        if (running) return;
+        const token = ++nextToken;
+        const game = prefs.game, purpose = prefs.purpose;
+        const instant = reduceMotion.matches;
+        prefs.last = null;
+        savePrefs();
+        hideOutcome();
+        main.dataset.gameState = 'running';
+        let winner;
+        if (game === 'ROULETTE') {
+          if (!$('wheel-rotor')) resetBoard();
+          document.querySelectorAll('.wheel-segment, .wheel-label').forEach(node => node.classList.remove('is-winner'));
+          winner = randomInt(vehicles.length);
+          const rotor = $('wheel-rotor');
+          rotor.getBoundingClientRect(); // 방금 다시 그린 바퀴도 현재 각도에서 회전을 시작하도록 스타일을 확정한다.
+          rotation = targetRotation(winner, vehicles.length);
+          rotor.classList.toggle('spinning', !instant);
+          rotor.style.setProperty('--spin-ms', GAMES.ROULETTE.ms + 'ms');
+          rotor.style.setProperty('--rotation', rotation + 'deg');
+        } else {
+          $('board').replaceChildren(drawLadder());
+          const results = vehicles.map((vehicle, index) => trace(index, ladder.rungs));
+          winner = results.findIndex(result => result.end === ladder.payIndex);
+          $('ladder-rungs').classList.add('shown');
+          const paths = $('ladder-paths');
+          results.forEach((result, index) => paths.append(svg('path', { class: 'ladder-path', d: result.d, pathLength: '1', 'data-index': String(index) })));
+          paths.getBoundingClientRect(); // 시작 위치를 적용한 뒤 전환을 시작한다.
+          paths.querySelectorAll('.ladder-path').forEach(path => {
+            path.style.setProperty('--trace-ms', GAMES.LADDER.ms + 'ms');
+            path.classList.add(instant ? 'done' : 'tracing');
+          });
+        }
+        // 키보드로 시작했으면 끝난 뒤 포커스를 되돌린다(진행 중에는 시작 버튼이 비활성이라 포커스가 빠진다).
+        running = { token, game, purpose, winner, timer: 0, refocus: document.activeElement === startButton };
+        updateControls();
+        running.timer = window.setTimeout(() => finishGame(token), instant ? 0 : GAMES[game].ms);
+      }
+
+      async function finishGame(token) {
+        if (!running || running.token !== token) return;
+        const safe = await safety.isSafeToPlay();
+        if (!running || running.token !== token) return; // 그 사이 멈췄다.
+        if (!safe) { stopGame(await safety.getPlaySafety()); return; }
+        const { game, purpose, winner, refocus } = running;
+        const vehicle = vehicles[winner];
+        running = null;
+        if (game === 'ROULETTE') {
+          $('wheel-rotor').classList.remove('spinning');
+          document.querySelectorAll('.wheel-segment[data-index="' + winner + '"], .wheel-label[data-index="' + winner + '"]').forEach(node => node.classList.add('is-winner'));
+        } else {
+          document.querySelector('.ladder-path[data-index="' + winner + '"]')?.classList.add('is-winner');
+          document.querySelectorAll('.ladder-top li')[winner]?.classList.add('is-winner');
+          document.querySelector('.ladder-slot.is-pay')?.classList.add('is-winner');
+        }
+        const title = sentence(purpose, vehicle.displayName);
+        tripLog.recordDecision({ kind: game, title: PURPOSES[purpose] + ' 정하기', result: vehicle.displayName });
+        prefs.last = { title };
+        savePrefs();
+        main.dataset.gameState = 'done';
+        showOutcome('done', title, '여행 기록에 남겼어요.');
+        updateControls();
+        if (refocus && !startButton.disabled) startButton.focus();
+      }
+
+      // 진행 중 잠금: 움직임을 현재 위치에서 멈추고 결과를 확정하지 않는다.
+      function stopGame(detail) {
+        if (!running) return;
+        window.clearTimeout(running.timer);
+        const { game, refocus } = running;
+        running = null;
+        if (game === 'ROULETTE') {
+          const rotor = $('wheel-rotor');
+          rotation = currentRotation(rotor);
+          rotor.classList.remove('spinning');
+          rotor.style.setProperty('--rotation', rotation + 'deg');
+        } else {
+          document.querySelectorAll('.ladder-path').forEach(path => {
+            path.style.strokeDashoffset = getComputedStyle(path).strokeDashoffset;
+            path.classList.remove('tracing');
+          });
+        }
+        main.dataset.gameState = 'stopped';
+        showOutcome('stopped', STOP_TEXT[detail?.reason] || STOP_TEXT.UNKNOWN, '결과는 정하지 않았어요.');
+        updateControls();
+        if (refocus) $('outcome').focus(); // 시작 버튼이 잠겨 있으므로 멈춘 이유로 포커스를 옮긴다.
+      }
+
+      // ---- 입력 (클릭은 손을 뗀 시점에 실행된다) ----
+      startButton.addEventListener('click', () => {
+        if (main.dataset.gameState === 'done' || main.dataset.gameState === 'stopped') { prefs.last = null; savePrefs(); resetBoard(); }
+        startGame();
+      });
+      for (const button of document.querySelectorAll('[data-game]')) button.addEventListener('click', () => {
+        if (running || prefs.game === button.dataset.game) return;
+        prefs = { ...prefs, game: button.dataset.game, last: null };
+        savePrefs();
+        resetBoard();
+      });
+      for (const button of document.querySelectorAll('[data-purpose]')) button.addEventListener('click', () => {
+        if (running || prefs.purpose === button.dataset.purpose) return;
+        prefs = { ...prefs, purpose: button.dataset.purpose, last: null };
+        savePrefs();
+        resetBoard();
+      });
+
+      // ---- 시작 ----
+      safety.subscribe(refreshSafety);
+      group.subscribe(renderGroup);
+      Promise.all([renderGroup(), window.CoDriveFunShell.mountRoutePanel()]).then(refreshSafety).then(() => { document.documentElement.dataset.ready = 'true'; });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<resources>
+    <string name="convoy_brand">CoDrive</string>
+    <string name="convoy_title">실시간 주행</string>
+    <string name="convoy_demo">시연 데이터</string>
+    <string name="convoy_demo_settings">시연 데이터 · 설정 열기</string>
+    <string name="convoy_distance_heading">목적지까지 남은 거리</string>
+    <string name="convoy_track_help">목적지에 가까운 순서입니다. 차량 사이 간격은 실제 거리 비율이 아닙니다.</string>
+    <string name="convoy_rest">휴식 요청</string>
+    <string name="convoy_energy">충전 요청</string>
+    <string name="convoy_demo_title">시연 설정</string>
+    <string name="convoy_demo_description">실제 차량·서버에 연결하지 않는 모의 화면입니다.</string>
+    <string name="convoy_done">닫기</string>
+    <string name="convoy_recover">연결·정보 복구</string>
+    <string name="convoy_advance">11초 경과</string>
+    <string name="convoy_detail">차량 상세 정보</string>
+    <string name="convoy_nav_group">우리 그룹</string>
+    <string name="convoy_nav_drive">실시간 주행</string>
+    <string name="convoy_nav_recommendation">AI 경로 추천</string>
+    <string name="convoy_nav_voice">음성 채널</string>
+    <string name="convoy_nav_history">여행 기록</string>
+    <string name="convoy_nav_current">실시간 주행, 현재 화면</string>
+    <string name="convoy_nav_unavailable">%1$s, 현재 화면에서는 사용할 수 없음</string>
+    <string name="convoy_vehicle_status">차량 상태</string>
+    <string name="convoy_vehicle_count">차량 %1$d대</string>
+    <string name="convoy_distance_order">목적지에 가까운 순</string>
+    <string name="convoy_distance_waiting">거리 정보를 기다리는 중</string>
+    <string name="convoy_destination_zero">목적지 · 0km</string>
+    <string name="convoy_remaining_distance">남은 거리</string>
+    <string name="convoy_current_route">현재 경로</string>
+    <string name="convoy_route_empty">안내 중인 경로가 없어요</string>
+    <string name="convoy_route_loading">내비게이션에 반영 중이에요</string>
+    <string name="convoy_route_open">현재 경로 보기</string>
+    <string name="convoy_route_compact_empty">현재 경로 · 안내 없음</string>
+    <string name="convoy_route_compact_loading">현재 경로 · 반영 중</string>
+</resources>

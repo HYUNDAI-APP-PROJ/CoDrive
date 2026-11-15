@@ -1,0 +1,5 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/convoy_nav_background" />
+    <stroke android:width="2dp" android:color="@color/convoy_nav_muted" />
+    <size android:width="12dp" android:height="12dp" />
+</shape>

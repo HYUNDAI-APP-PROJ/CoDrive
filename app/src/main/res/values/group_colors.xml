@@ -1,0 +1,9 @@
+<resources>
+<color name="group_background">#F2F2F0</color><color name="group_surface">#FFFFFF</color>
+<color name="group_field">#F8F8F7</color><color name="group_ink">#1C1D1F</color>
+<color name="group_muted">#75777C</color><color name="group_line">#E6E7E7</color>
+<color name="group_on_accent">#FFFFFF</color><color name="group_hero">#18191B</color>
+<color name="group_hero_muted">#AAADB2</color><color name="group_error">#AB4445</color>
+<color name="group_disabled">#9B9C9C</color><color name="group_success">#247957</color>
+<color name="group_success_surface">#F1F6F2</color>
+</resources>

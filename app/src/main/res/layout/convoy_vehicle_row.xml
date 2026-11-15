@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:paddingHorizontal="16dp" android:paddingVertical="4dp" android:gravity="center_vertical" android:baselineAligned="false">
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="26" android:orientation="vertical">
+        <TextView android:id="@+id/convoy_card_name" style="@style/ConvoyText" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/convoy_card_motion" style="@style/ConvoyText.Muted" android:layout_marginTop="4dp" />
+        <TextView android:id="@+id/convoy_card_connection" style="@style/ConvoyText.Muted" android:textSize="14sp" android:layout_marginTop="4dp" android:maxLines="2" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="44" android:orientation="vertical" android:paddingHorizontal="8dp">
+        <TextView android:id="@+id/convoy_card_eta" style="@style/ConvoyText" android:layout_height="34sp" android:gravity="center_vertical" android:textSize="26sp" android:fontFamily="sans-serif-medium" />
+        <TextView android:id="@+id/convoy_card_arrival" style="@style/ConvoyText.Muted" android:textSize="14sp" android:layout_marginTop="4dp" />
+        <TextView android:id="@+id/convoy_card_relative" style="@style/ConvoyText.Muted" android:layout_marginTop="4dp" android:visibility="gone" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/convoy_card_energy_area" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="30" android:orientation="vertical">
+        <TextView android:id="@+id/convoy_card_energy" style="@style/ConvoyText" android:textSize="20sp" />
+        <ProgressBar android:id="@+id/convoy_card_meter" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="5dp" android:max="100" />
+        <TextView android:id="@+id/convoy_card_second_energy" style="@style/ConvoyText.Muted" android:textSize="14sp" android:visibility="gone" />
+        <TextView android:id="@+id/convoy_card_notice" style="@style/ConvoyText.Muted" android:textSize="14sp" android:layout_marginTop="5dp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/convoy_card_trip" style="@style/ConvoyText.Muted" android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

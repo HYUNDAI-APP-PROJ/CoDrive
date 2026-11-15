@@ -1,0 +1,15 @@
+<resources>
+    <string name="nav_start">여행 시작</string>
+    <string name="nav_group">우리 그룹</string>
+    <string name="nav_driving">실시간 주행</string>
+    <string name="nav_recommendation">AI 경로 추천</string>
+    <string name="nav_games">즐길거리</string>
+    <string name="nav_challenges">도전과제</string>
+    <string name="nav_voice">음성 채널</string>
+    <string name="nav_history">여행 기록</string>
+    <string name="nav_menu">화면 이동</string>
+    <item name="nav_start" type="id" /><item name="nav_group" type="id" />
+    <item name="nav_driving" type="id" /><item name="nav_recommendation" type="id" />
+    <item name="nav_games" type="id" /><item name="nav_challenges" type="id" />
+    <item name="nav_voice" type="id" /><item name="nav_history" type="id" /><item name="nav_menu" type="id" />
+</resources>
