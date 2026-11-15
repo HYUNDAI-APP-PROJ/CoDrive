@@ -6,6 +6,12 @@ const assert = require('node:assert/strict');
 const assets = path.join(__dirname, '../../app/src/main/assets');
 assert.equal(fs.readFileSync(path.join(assets, 'route-recommendation.html'), 'utf8'),
   fs.readFileSync(path.join(__dirname, 'route-recommendation.html'), 'utf8'));
+for (const page of ['fun-stop-games.html', 'fun-challenges.html', 'trip-card.html']) {
+  assert.equal(fs.readFileSync(path.join(assets, page), 'utf8'), fs.readFileSync(path.join(__dirname, page), 'utf8'));
+}
+for (const script of fs.readdirSync(path.join(__dirname, 'js')).filter(name => name.endsWith('.js'))) {
+  assert.equal(fs.readFileSync(path.join(assets, 'js', script), 'utf8'), fs.readFileSync(path.join(__dirname, 'js', script), 'utf8'));
+}
 const calls = [], storage = new Map();
 const viewportMeta = { content: '' };
 const window = { devicePixelRatio: 2, CoDrive: {

@@ -18,9 +18,6 @@ import java.util.List;
 
 /** View-only composition; the ViewModel owns all state transitions. */
 public final class DrivingStatusScreen {
-    private static final int[] NAV_ITEMS={R.id.convoy_nav_group,R.id.convoy_nav_drive,R.id.convoy_nav_recommendation,R.id.convoy_nav_voice,R.id.convoy_nav_history};
-    private static final int[] NAV_LABELS={R.id.convoy_nav_label_group,R.id.convoy_nav_label_drive,R.id.convoy_nav_label_recommendation,R.id.convoy_nav_label_voice,R.id.convoy_nav_label_history};
-    private static final int[] NAV_TITLES={R.string.convoy_nav_group,R.string.convoy_nav_drive,R.string.convoy_nav_recommendation,R.string.convoy_nav_voice,R.string.convoy_nav_history};
     private final View root;
     private final Context context;
     private final DrivingStatusViewModel model;
@@ -40,9 +37,6 @@ public final class DrivingStatusScreen {
         TextView demo=root.findViewById(R.id.convoy_demo);
         demo.setBackground(new RippleDrawable(ColorStateList.valueOf(context.getColor(R.color.convoy_hover)),
                 VehicleStatusCard.shape(context,context.getColor(R.color.convoy_surface),context.getColor(R.color.convoy_line),6),null));
-        root.findViewById(R.id.convoy_nav_drive).setSelected(true);
-        for(int i=0;i<NAV_ITEMS.length;i++) if(i!=1) root.findViewById(NAV_ITEMS[i]).setContentDescription(
-                context.getString(R.string.convoy_nav_unavailable,context.getString(NAV_TITLES[i])));
         if(BuildConfig.DEBUG) {
             demo.setClickable(true); demo.setFocusable(true);
             demo.setContentDescription(context.getString(R.string.convoy_demo_settings));
@@ -79,14 +73,6 @@ public final class DrivingStatusScreen {
         sidebar.getLayoutParams().width=dp(railWidth); sidebar.requestLayout();
         int railInset=dp(railWidth==220?16:8);
         root.findViewById(R.id.convoy_sidebar_content).setPadding(railInset,dp(28),railInset,dp(24));
-        TextView brand=root.findViewById(R.id.convoy_nav_brand);
-        brand.setText(railWidth==220?context.getString(R.string.convoy_brand):"C");
-        brand.setPadding(dp(railWidth==220?12:0),0,0,0);
-        brand.setGravity(railWidth==220?Gravity.CENTER_VERTICAL:Gravity.CENTER);
-        for(int i=0;i<NAV_ITEMS.length;i++) {
-            root.findViewById(NAV_LABELS[i]).setVisibility(railWidth==220?View.VISIBLE:View.GONE);
-            ((LinearLayout)root.findViewById(NAV_ITEMS[i])).setGravity(railWidth==220?Gravity.CENTER_VERTICAL:Gravity.CENTER);
-        }
         root.findViewById(R.id.convoy_main_host).setPadding(dp(horizontal),dp(top),dp(horizontal),dp(bottom));
         View content=root.findViewById(R.id.convoy_content);
         content.getLayoutParams().width=availableWidth; content.requestLayout();
