@@ -100,8 +100,11 @@ public final class AppNavigation {
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2); size.bottomMargin = dp(activity, 8);
             container.addView(item, size);
         }
+        boolean[] expanded = {true};
         container.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             boolean wide = r - l >= dp(activity, 180);
+            if (expanded[0] == wide) return;
+            expanded[0] = wide;
             brand.setText(wide ? "CoDrive" : "Co"); brand.setGravity(wide ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
             for (int i = 1; i < container.getChildCount(); i++) {
                 LinearLayout item = (LinearLayout) container.getChildAt(i);
