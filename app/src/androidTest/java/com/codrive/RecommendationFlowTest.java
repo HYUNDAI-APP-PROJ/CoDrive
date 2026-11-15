@@ -13,6 +13,10 @@ import java.util.function.Consumer;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.codrive.app.MainActivity;
+import com.codrive.app.DrivingStatusActivity;
+import com.codrive.group.ui.lobby.GroupLobbyActivity;
+import com.codrive.group.ui.waiting.GroupWaitingActivity;
+import com.codrive.group.data.repository.MockGroupRepository;
 import org.json.JSONTokener;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +32,8 @@ public class RecommendationFlowTest {
     private static final class Host implements AutoCloseable, Application.ActivityLifecycleCallbacks {
         private final Application application = ApplicationProvider.getApplicationContext();
         private volatile MainActivity activity;
+        private volatile Activity top;
+        private final java.util.Set<Activity> opened = new java.util.HashSet<>();
         private CountDownLatch resumed = new CountDownLatch(1);
         Host(Intent intent) throws Exception {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
@@ -39,28 +45,35 @@ public class RecommendationFlowTest {
         void onActivity(Consumer<MainActivity> action) {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> action.accept(activity));
         }
+        void onTop(Consumer<Activity> action) {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> action.accept(top));
+        }
         void recreate() throws Exception {
             resumed = new CountDownLatch(1);
             onActivity(Activity::recreate);
             assertTrue("Activity recreation timed out", resumed.await(10, TimeUnit.SECONDS));
         }
         @Override public void close() {
-            onActivity(Activity::finish);
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                for (Activity value : new java.util.ArrayList<>(opened)) value.finish();
+            });
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> application.unregisterActivityLifecycleCallbacks(this));
         }
         public void onActivityResumed(Activity value) {
+            top = value;
             if (value instanceof MainActivity) { activity = (MainActivity)value; resumed.countDown(); }
         }
-        public void onActivityCreated(Activity value, Bundle saved) { }
+        public void onActivityCreated(Activity value, Bundle saved) { opened.add(value); }
         public void onActivityStarted(Activity value) { }
         public void onActivityPaused(Activity value) { }
         public void onActivityStopped(Activity value) { }
         public void onActivitySaveInstanceState(Activity value, Bundle saved) { }
-        public void onActivityDestroyed(Activity value) { }
+        public void onActivityDestroyed(Activity value) { opened.remove(value); }
     }
     @Before public void reset() {
         Context context = ApplicationProvider.getApplicationContext();
         context.getSharedPreferences("recommendation_screen", Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences("web_screens", Context.MODE_PRIVATE).edit().clear().commit();
     }
     private Host launch(boolean group) throws Exception {
         Intent intent = new Intent(ApplicationProvider.getApplicationContext(), MainActivity.class).putExtra("mock_group", group);
@@ -98,6 +111,76 @@ public class RecommendationFlowTest {
     private void owner(Host scenario, String label) throws Exception {
         await(scenario, "!document.getElementById('route-active').hidden && document.getElementById('route-owner').textContent==="
                 + org.json.JSONObject.quote(label), 5000);
+    }
+    private void navigate(Host scenario, String screen) throws Exception {
+        js(scenario, "document.querySelector('.nav [data-screen=\"" + screen + "\"]').click()");
+    }
+    private void page(Host scenario, String screen) throws Exception {
+        await(scenario, "document.querySelector('.nav [aria-current=page]')?.dataset.screen==='" + screen + "'", 5000);
+    }
+    private void top(Host scenario, Class<? extends Activity> type) {
+        long end = SystemClock.elapsedRealtime() + 5000;
+        while (!type.isInstance(scenario.top) && SystemClock.elapsedRealtime() < end) SystemClock.sleep(50);
+        assertTrue("Expected " + type.getSimpleName() + ", got " + scenario.top, type.isInstance(scenario.top));
+    }
+    @Test public void sidebarConnectsGroupAndDrivingWithoutLosingDraft() throws Exception {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            MockGroupRepository repository = MockGroupRepository.getInstance(ApplicationProvider.getApplicationContext());
+            String group = repository.activeGroupId();
+            if (group != null) repository.leaveGroup(group, repository.activeMemberId());
+        });
+        try (Host scenario = launch(true)) {
+            MainActivity original = scenario.activity;
+            page(scenario, "recommendation");
+            type(scenario, "prompt", "돌아와서 보낼 추천 요청");
+            navigate(scenario, "group"); top(scenario, GroupLobbyActivity.class);
+            scenario.onTop(a -> {
+                ((android.widget.EditText)a.findViewById(R.id.group_name)).setText("메뉴 연결 여행");
+                a.findViewById(R.id.submit).performClick();
+            });
+            top(scenario, GroupWaitingActivity.class);
+            scenario.onTop(a -> a.findViewById(R.id.toggle_ready).performClick());
+            scenario.onTop(a -> { assertTrue(a.findViewById(R.id.start_trip).isEnabled()); a.findViewById(R.id.start_trip).performClick(); });
+            top(scenario, DrivingStatusActivity.class);
+            Activity driving = scenario.top;
+            scenario.onTop(a -> a.findViewById(R.id.nav_recommendation).performClick());
+            top(scenario, MainActivity.class); assertSame(original, scenario.activity);
+            await(scenario, "document.getElementById('prompt')?.value==='돌아와서 보낼 추천 요청'", 3000);
+            navigate(scenario, "group"); top(scenario, GroupWaitingActivity.class);
+            scenario.onTop(a -> a.findViewById(R.id.nav_driving).performClick());
+            top(scenario, DrivingStatusActivity.class); assertSame(driving, scenario.top);
+            scenario.onTop(a -> a.findViewById(R.id.nav_recommendation).performClick());
+            top(scenario, MainActivity.class);
+            assertEquals(Boolean.TRUE, js(scenario, "document.querySelector('[data-screen=voice]').disabled"));
+        }
+    }
+    @Test public void gameRecordsSurviveMenuChangesRecreationAndCompactNavigation() throws Exception {
+        try (Host scenario = launch(true)) {
+            page(scenario, "recommendation"); navigate(scenario, "games"); page(scenario, "games");
+            await(scenario, "Boolean(window.CoDriveMock && window.CoDriveTripLog)", 5000);
+            js(scenario, "CoDriveMock.setScenario('rest-stop')");
+            await(scenario, "document.getElementById('start')?.disabled===false", 3000);
+            click(scenario, "start");
+            await(scenario, "document.getElementById('outcome')?.hidden===false", 6000);
+            int decisions = ((Number)js(scenario, "JSON.parse(sessionStorage.getItem('codrive.history.trip-log.v1')).decisions.length")).intValue();
+            assertEquals(2, decisions);
+            navigate(scenario, "challenges"); page(scenario, "challenges");
+            navigate(scenario, "history"); page(scenario, "history");
+            await(scenario, "document.querySelectorAll('#decisions li').length===2", 3000);
+            scenario.recreate(); page(scenario, "history");
+            await(scenario, "document.querySelectorAll('#decisions li').length===2", 3000);
+            scenario.onActivity(a -> a.getOnBackPressedDispatcher().onBackPressed()); page(scenario, "challenges");
+            scenario.onActivity(a -> {
+                WebView web = a.findViewById(R.id.recommendation_web);
+                ViewGroup.LayoutParams params = web.getLayoutParams();
+                params.width = Math.round(320 * a.getResources().getDisplayMetrics().density); web.setLayoutParams(params);
+            });
+            await(scenario, "Math.abs(innerWidth-320)<=1 && getComputedStyle(document.querySelector('.navigation-toggle')).display!=='none'", 3000);
+            js(scenario, "document.querySelector('.navigation-toggle').click()");
+            assertEquals(Boolean.TRUE, js(scenario, "document.querySelector('.sidebar').classList.contains('navigation-open')"));
+            navigate(scenario, "games"); page(scenario, "games");
+            assertEquals(decisions, ((Number)js(scenario, "JSON.parse(sessionStorage.getItem('codrive.history.trip-log.v1')).decisions.length")).intValue());
+        }
     }
     @Test public void offSelectionOnTimeoutAcceptRejectAndRecreation() throws Exception {
         try (Host scenario = launch(true)) {

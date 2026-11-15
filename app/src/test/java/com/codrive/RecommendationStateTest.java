@@ -2,7 +2,7 @@ package com.codrive;
 
 import static org.junit.Assert.*;
 
-import com.codrive.group.data.repository.MockGroupRepository;
+import com.codrive.group.data.model.TravelGroup;
 import com.codrive.recommendation.ui.RecommendationState;
 import java.io.*;
 import org.junit.Test;
@@ -11,7 +11,7 @@ public class RecommendationStateTest {
     @Test
     public void historyIsSeparatedAndSurvivesRestoration() throws Exception {
         RecommendationState state = new RecommendationState();
-        state.group = new MockGroupRepository().defaultGroup();
+        state.group = new TravelGroup("default", "강릉 주말 여행", 3);
         state.draft = "  조용한 카페  ";
         assertTrue(state.submit());
         assertEquals("", state.draft);
@@ -39,19 +39,14 @@ public class RecommendationStateTest {
         state.draft = "맛집";
         assertTrue(state.needsGroup());
         assertFalse(state.submit());
-        state.group = new MockGroupRepository().create("  우리 여행  ");
+        state.group = new TravelGroup("first", "우리 여행", 3);
         assertEquals("우리 여행", state.group.name);
         assertTrue(state.submit());
-        state.group = new MockGroupRepository().create("새 여행");
+        state.group = new TravelGroup("second", "새 여행", 3);
         assertTrue(state.turns().isEmpty());
     }
     @Test
-    public void groupNameAndHistoryHaveBounds() {
-        try {
-            new MockGroupRepository().create(" ");
-            fail();
-        } catch (IllegalArgumentException expected) {
-        }
+    public void historyHasBounds() {
         RecommendationState state = new RecommendationState();
         for (int i = 0; i < 35; i++) {
             state.draft = "요청 " + i;

@@ -13,7 +13,7 @@
 
 여러 차량이 함께 여행할 때 그룹 관리, 대열 확인, 음성 대화, 공동 의사결정, AI 추천과 여행 기록을 제공하는 앱을 목표로 합니다.
 
-현재는 `:app` 단일 모듈에서 완성한 HTML을 앱에 포함해 추천 화면을 실행합니다. Android WebView가 화면을 표시하고, 마이크 권한과 한국어 음성 입력은 Java 코드에서 처리합니다. 서버·AI·차량 SDK·실제 내비게이션은 연결하지 않았습니다. 아래 기능별 요구사항은 전체 개발 범위이며, 구현된 목업 범위와 구분합니다.
+현재는 `:app` 단일 모듈에서 추천·즐길거리·도전과제·여행 카드 HTML과 네이티브 그룹·주행 화면을 공통 왼쪽 메뉴로 연결합니다. 마이크 권한과 한국어 음성 입력은 Java 코드에서 처리합니다. 서버·AI·차량 SDK·실제 내비게이션은 연결하지 않았습니다. 아래 기능별 요구사항은 전체 개발 범위이며, 구현된 목업 범위와 구분합니다.
 
 ## 개발 시작하기
 
@@ -35,11 +35,18 @@ Android Studio에서 프로젝트 루트를 열고 Gradle을 동기화합니다.
 - 앱 내부에 대화·경로·입력 초안·모드·토글·그룹과 대기 시간을 저장하고 화면 재생성 시 복원합니다.
 - 마이크는 Android `SpeechInputController`와 연결합니다. 최종 결과를 자동 전송하며 취소·오류 시 초안을 유지하고 지연 결과를 무시합니다.
 
-`MainActivity.java`는 앱 내부 HTML 표시·화면 여백·키보드·권한·상태 저장을 담당하고, `assets/native-adapter.js`는 Android 음성 이벤트를 기존 HTML 입력 흐름으로 전달합니다. 나머지 메뉴와 실제 AI·내비게이션·차량 간 동기화는 후속 구현 대상입니다.
+`MainActivity.java`는 앱 내부 HTML 표시·화면 여백·키보드·권한·상태 저장을 담당하고, `assets/native-adapter.js`는 Android 음성 이벤트를 기존 HTML 입력 흐름으로 전달합니다. `AppNavigation.java`가 메뉴 목적지를 정하고 `assets/app-navigation.js`가 기존 HTML 왼쪽 메뉴를 활성화합니다.
+
+- 여행 시작·우리 그룹은 가입 상태에 따라 생성/참여 또는 대기실을 엽니다. 대기실에서 준비 완료 후 여행 시작에 성공하면 주행 화면을 엽니다.
+- 실시간 주행, AI 경로 추천, 즐길거리(룰렛·사다리), 도전과제, 여행 기록을 메뉴로 왕복할 수 있습니다. 좁은 창에서는 `화면 이동` 버튼으로 같은 메뉴를 엽니다. 음성 채널은 준비 중입니다.
+- HTML 화면은 같은 WebView에서 열고, 룰렛 결과·도전과제·여행 기록을 Android에도 저장합니다. 화면 재생성 후에도 기록을 복원하며 뒤로가기는 이전 HTML 화면 또는 Activity로 돌아갑니다.
+- 그룹·주행·추천의 목업 데이터는 아직 독립적입니다. 생성한 그룹이나 추천 경로가 다른 도메인의 목업 데이터를 자동 변경하지 않습니다. 디버그 빌드의 즐길거리·기록 화면에는 기존 `시연 조작` 패널이 표시됩니다.
 
 ```bash
 # HTML 디자인 수정 후 앱 파일도 동기화
 cp docs/design/route-recommendation.html app/src/main/assets/route-recommendation.html
+cp docs/design/{fun-stop-games,fun-challenges,trip-card}.html app/src/main/assets/
+cp docs/design/js/*.js app/src/main/assets/js/
 node docs/design/verify-route-recommendation.cjs
 node docs/design/verify-native-adapter.cjs
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --no-configuration-cache

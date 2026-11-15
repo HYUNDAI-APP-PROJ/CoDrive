@@ -10,6 +10,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.codrive.R;
+import com.codrive.app.AppNavigation;
 
 /** Shared chrome: explicit day/night choice, persisted independently of group membership. */
 public abstract class GroupScreenActivity extends AppCompatActivity {
@@ -44,5 +45,6 @@ public abstract class GroupScreenActivity extends AppCompatActivity {
             getSharedPreferences("group_appearance", MODE_PRIVATE).edit().putInt("mode", next).apply();
             getDelegate().setLocalNightMode(next);
         });
+        AppNavigation.attachGroup(this, root);
     }
 }

@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 import com.codrive.R;
+import com.codrive.app.AppNavigation;
 import com.codrive.group.data.model.GroupMember;
 import com.codrive.group.data.model.GroupSession;
 import com.codrive.group.data.repository.MockGroupRepository;
@@ -88,6 +89,9 @@ public final class GroupWaitingActivity extends GroupScreenActivity {
     private void text(int id, CharSequence value) { ((TextView)findViewById(id)).setText(value); }
     private void visible(int id, boolean show) { findViewById(id).setVisibility(show ? View.VISIBLE : View.GONE); }
     private void render(GroupWaitingUiState state) {
+        if (latest != null && !latest.started && state.started) {
+            AppNavigation.open(this, "driving");
+        }
         latest = state;
         text(R.id.waiting_error, state.message);
         visible(R.id.waiting_error, state.message != null);

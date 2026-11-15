@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -46,6 +48,12 @@ public final class DrivingStatusActivity extends AppCompatActivity {
         }).get(DrivingStatusViewModel.class);
         if(BuildConfig.DEBUG && savedInstanceState==null && getIntent().hasExtra("demo_scenario"))
             model.scenario(DemoScenario.parse(getIntent().getStringExtra("demo_scenario")));
+        AppNavigation.fillSidebar(this, findViewById(R.id.convoy_sidebar_content), "driving");
+        TextView compactMenu = AppNavigation.menuButton(this, "driving");
+        ((LinearLayout)findViewById(R.id.convoy_topbar)).addView(compactMenu, 0,
+                new LinearLayout.LayoutParams(-2, -1));
+        root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> compactMenu.setVisibility(
+                (r-l)/getResources().getDisplayMetrics().density <= 600 ? View.VISIBLE : View.GONE));
         screen=new DrivingStatusScreen(root,model);
         model.state().observe(this,screen::bind);
         ViewCompat.requestApplyInsets(root);
