@@ -92,7 +92,7 @@ public final class RemainingDistanceTrack extends View {
         float density = getResources().getDisplayMetrics().density;
         compact = getWidth() / density < 1000;
         float height = getHeight() / density;
-        boolean spacious = getWidth() / density >= 1400 && height >= 300;
+        boolean spacious = getWidth() / density >= 900 && height >= 300;
         labelSize = spacious ? 36 : height >= 240 ? 30 : height >= 170 ? 24 : height >= 145 ? 18 : 16;
         headingSize = spacious ? 36 : height >= 240 ? 32 : height >= 170 ? 28 : height >= 145 ? 22 : 20;
         axisSize = spacious ? 24 : height >= 240 ? 22 : height >= 170 ? 20 : height >= 145 ? 18 : 16;
@@ -149,10 +149,12 @@ public final class RemainingDistanceTrack extends View {
         float flagX = getWidth() - paint.measureText("공동 목적지") - dp(15 * flagScale + 12);
         canvas.save(); canvas.translate(flagX, dp(headingSize + 4 - 20 * flagScale));
         canvas.scale(dp(flagScale), dp(flagScale));
-        paint.setColor(ink); canvas.drawPath(destinationFlag, paint);
-        paint.setStrokeWidth(2); canvas.drawLine(0, 0, 0, 20, paint); canvas.restore();
+        paint.setColor(ink); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.7f);
+        paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
+        canvas.drawPath(destinationFlag, paint);
+        canvas.drawLine(0, 0, 0, 20, paint); canvas.restore();
 
-        paint.setColor(line);
+        paint.setColor(line); paint.setStyle(Paint.Style.FILL);
         float axisHalfWidth = dp(2.5f * detailScale);
         canvas.drawRoundRect(left, baseline - axisHalfWidth, right, baseline + axisHalfWidth, axisHalfWidth, axisHalfWidth, paint);
         // The common destination is a prominent vertical rail shared by every vehicle row.
@@ -175,7 +177,7 @@ public final class RemainingDistanceTrack extends View {
             drawCar(canvas, marker, ink);
             int fill = color(marker.own ? R.color.convoy_own : R.color.convoy_surface);
             paint.setStyle(Paint.Style.FILL); paint.setColor(fill);
-            float radius = Math.min(dp(20), marker.labelBounds.height() / 2);
+            float radius = dp(6);
             canvas.drawRoundRect(marker.labelBounds, radius, radius, paint);
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(detailScale));
             paint.setColor(marker.own ? fill : line);
@@ -191,17 +193,17 @@ public final class RemainingDistanceTrack extends View {
     }
 
     private void drawCar(Canvas canvas, Marker marker, int ink) {
-        int fill = color(marker.own ? R.color.convoy_own : R.color.convoy_surface);
-        int window = color(marker.own ? R.color.convoy_own_ink : R.color.convoy_muted);
         canvas.save(); canvas.translate(marker.x, marker.y); canvas.scale(dp(carScale), dp(carScale));
-        paint.setStyle(Paint.Style.FILL); paint.setColor(fill); canvas.drawPath(carBody, paint);
-        paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.8f); paint.setColor(ink);
+        paint.setStyle(Paint.Style.FILL); paint.setColor(color(R.color.convoy_surface)); canvas.drawPath(carBody, paint);
+        paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.7f); paint.setColor(ink);
+        paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
         canvas.drawPath(carBody, paint);
-        paint.setStyle(Paint.Style.FILL); paint.setColor(window); canvas.drawPath(carWindow, paint);
-        paint.setColor(fill); paint.setStrokeWidth(1.8f); canvas.drawLine(3, -9, 3, -4, paint);
-        paint.setColor(ink); canvas.drawCircle(-13, 7, 4, paint); canvas.drawCircle(15, 7, 4, paint);
-        paint.setColor(color(R.color.convoy_surface));
-        canvas.drawCircle(-13, 7, 1.6f, paint); canvas.drawCircle(15, 7, 1.6f, paint);
+        canvas.drawPath(carWindow, paint);
+        canvas.drawLine(3, -9, 3, -4, paint);
+        paint.setStyle(Paint.Style.FILL); paint.setColor(color(R.color.convoy_surface));
+        canvas.drawCircle(-13, 7, 4, paint); canvas.drawCircle(15, 7, 4, paint);
+        paint.setStyle(Paint.Style.STROKE); paint.setColor(ink);
+        canvas.drawCircle(-13, 7, 4, paint); canvas.drawCircle(15, 7, 4, paint);
         canvas.restore();
     }
 }
