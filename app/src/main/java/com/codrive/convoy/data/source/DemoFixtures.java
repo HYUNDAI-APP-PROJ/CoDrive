@@ -1,7 +1,6 @@
 package com.codrive.convoy.data.source;
 
 import com.codrive.convoy.data.model.*;
-import com.codrive.voice.data.model.VoiceSession;
 import java.util.ArrayList;
 import java.util.List;
 import static com.codrive.convoy.data.model.Measurement.Quality.*;
@@ -63,7 +62,6 @@ public final class DemoFixtures {
         if (type==Powertrain.EV) v.battery=Measurement.mock(energy,now); else v.fuel=Measurement.mock(energy,now);
         v.drivingSeconds=Measurement.mock(driving,now); v.motion=Measurement.mock(Motion.MOVING,now);
         v.navigation=Measurement.mock(Navigation.GUIDING,now); v.alertsQuality=AVAILABLE;
-        if (order != 1) v.voice=new VoiceSession(VoiceSession.State.JOINED,false);
         return v;
     }
     private static void arrive(Builder v,long now) {

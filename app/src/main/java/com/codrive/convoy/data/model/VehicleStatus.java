@@ -1,6 +1,5 @@
 package com.codrive.convoy.data.model;
 
-import com.codrive.voice.data.model.VoiceSession;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +39,6 @@ public final class VehicleStatus implements Serializable {
     public final List<Alert> alerts;
     public final Measurement.Quality alertsQuality;
     public final VehicleRequest request;
-    public final VoiceSession voice;
 
     private VehicleStatus(Builder b) {
         vehicleId = b.vehicleId; displayName = b.displayName; displayOrder = b.displayOrder;
@@ -52,7 +50,7 @@ public final class VehicleStatus implements Serializable {
         drivingSeconds = normalize(b.drivingSeconds, Double.MAX_VALUE); tripDistance = normalize(b.tripDistance, Double.MAX_VALUE);
         range = normalize(b.range, Double.MAX_VALUE); charging = b.charging;
         alerts = Collections.unmodifiableList(new ArrayList<>(b.alerts)); alertsQuality = b.alertsQuality;
-        request = b.request; voice = b.voice;
+        request = b.request;
     }
 
     private static Measurement<Double> normalize(Measurement<Double> m, double max) {
@@ -77,7 +75,6 @@ public final class VehicleStatus implements Serializable {
         public List<Alert> alerts = new ArrayList<>();
         public Measurement.Quality alertsQuality = Measurement.Quality.NO_DATA;
         public VehicleRequest request = VehicleRequest.idle();
-        public VoiceSession voice = VoiceSession.idle();
         public Builder(String id, String name, int order) { vehicleId = id; displayName = name; displayOrder = order; }
         private static Measurement<Double> missing() { return Measurement.missing(Measurement.Quality.NO_DATA); }
         private Builder(VehicleStatus v) {
@@ -87,7 +84,7 @@ public final class VehicleStatus implements Serializable {
             motion=v.motion; navigation=v.navigation; distance=v.distance; remainingSeconds=v.remainingSeconds;
             battery=v.battery; fuel=v.fuel; drivingSeconds=v.drivingSeconds; tripDistance=v.tripDistance;
             range=v.range; charging=v.charging; alerts=new ArrayList<>(v.alerts); alertsQuality=v.alertsQuality;
-            request=v.request; voice=v.voice;
+            request=v.request;
         }
         public VehicleStatus build() { return new VehicleStatus(this); }
     }

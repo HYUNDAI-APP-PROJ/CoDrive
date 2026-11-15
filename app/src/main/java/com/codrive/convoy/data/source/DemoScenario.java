@@ -8,7 +8,7 @@ public enum DemoScenario {
     CLOSE_MARKERS("10 · 가까운 차량 위치"), ONE_ARRIVED("11a · 한 대 도착"), ALL_ARRIVED("11b · 모두 도착"),
     ZERO_DISTANCE("12 · 거리 0·도착 미확인"), SOLO("13a · 내 차 한 대"), TWO_VEHICLES("13b · 두 대"),
     NO_SELF_ETA("14a · 내 차 도착 정보 없음"), NO_DATA("14b · 모든 거리 정보 없음"),
-    WARNINGS("15 · 차량 경고"), VOICE_FAILURE("16 · 음성 실패·재시도"),
+    WARNINGS("15 · 차량 경고"),
     LOADING("확장 · 정보 확인 중"), PERMISSION_DENIED("확장 · 접근 권한 없음"),
     ERROR("확장 · 조회 실패"), RECONNECTING("확장 · 재접속 중"),
     PEER_REQUEST("확장 · 일행 휴식 요청"), PHEV("확장 · PHEV 배터리·연료"),

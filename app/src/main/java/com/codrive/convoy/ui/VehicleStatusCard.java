@@ -13,7 +13,6 @@ import android.widget.TextView;
 import androidx.core.widget.TextViewCompat;
 import com.codrive.R;
 import com.codrive.convoy.data.model.*;
-import com.codrive.voice.data.model.VoiceSession;
 
 public final class VehicleStatusCard {
     public final View view;
@@ -88,13 +87,10 @@ public final class VehicleStatusCard {
             if(notice.contains("잔량")) notice="잔량 낮음";
         }
         show(R.id.convoy_card_notice,notice,ink);
-        VoiceSession voice=own?state.voice:vehicle.voice;
-        String voiceText=voice.state==VoiceSession.State.JOINED ? voice.muted?"음성 참여 · 마이크 꺼짐":"음성 참여 중"
-                : voice.state==VoiceSession.State.CONNECTING?"음성 연결 중":voice.state==VoiceSession.State.FAILED?"음성 연결 실패":"음성 미참여";
-        show(R.id.convoy_card_connection,compact?"":!freshness.isEmpty()?freshness:shortWindow?"":voiceText,muted);
+        show(R.id.convoy_card_connection,compact?"":freshness,muted);
         if(!compact) view.setPadding(dp(16),dp(shortWindow?12:16),dp(16),dp(shortWindow?12:16));
         view.setContentDescription(vehicle.displayName+". "+state.motion(vehicle)+". "+eta+". "+state.arrivalDetail(vehicle)
-                +". "+state.relative(vehicle)+". "+energyText+". "+secondary+". 이번 주행 "+driving+". "+notice+". "+freshness+". "+voiceText);
+                +". "+state.relative(vehicle)+". "+energyText+". "+secondary+". 이번 주행 "+driving+". "+notice+". "+freshness);
         view.setClickable(state.trip.detailsAllowed);
         view.setOnClickListener(state.trip.detailsAllowed?v->onDetails.run():null);
     }

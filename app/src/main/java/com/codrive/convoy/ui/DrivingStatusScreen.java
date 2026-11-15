@@ -2,7 +2,6 @@ package com.codrive.convoy.ui;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.RippleDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -10,12 +9,10 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.content.res.AppCompatResources;
 import com.codrive.BuildConfig;
 import com.codrive.R;
 import com.codrive.convoy.data.model.*;
 import com.codrive.convoy.data.source.DemoScenario;
-import com.codrive.voice.data.model.VoiceSession;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,8 +37,6 @@ public final class DrivingStatusScreen {
         });
         root.findViewById(R.id.convoy_rest).setOnClickListener(v->model.request(VehicleRequest.Type.REST));
         root.findViewById(R.id.convoy_energy).setOnClickListener(v->{if(state!=null) model.request(state.energyRequest());});
-        root.findViewById(R.id.convoy_voice).setOnClickListener(v->model.voiceAction());
-        root.findViewById(R.id.convoy_mic).setOnClickListener(v->model.microphone());
         TextView demo=root.findViewById(R.id.convoy_demo);
         demo.setBackground(new RippleDrawable(ColorStateList.valueOf(context.getColor(R.color.convoy_hover)),
                 VehicleStatusCard.shape(context,context.getColor(R.color.convoy_surface),context.getColor(R.color.convoy_line),6),null));
@@ -163,11 +158,6 @@ public final class DrivingStatusScreen {
         VehicleRequest request=state.trip.mine().request;
         requestButton(R.id.convoy_rest,VehicleRequest.Type.REST,request);
         requestButton(R.id.convoy_energy,state.energyRequest(),request);
-        boolean joined=state.voice.state==VoiceSession.State.JOINED;
-        String voice=joined?"음성 나가기":state.voice.state==VoiceSession.State.CONNECTING?"연결 중 · 취소":state.voice.state==VoiceSession.State.FAILED?"음성 다시 시도":"음성 참여";
-        action(R.id.convoy_voice,voice+"  "+state.joinedCount+"/"+state.trip.vehicles.size(),true,state.trip.actionsAllowed);
-        root.findViewById(R.id.convoy_mic).setVisibility(joined?View.VISIBLE:View.GONE);
-        action(R.id.convoy_mic,state.voice.muted?"마이크 켜기":"마이크 끄기",!state.voice.muted,state.trip.actionsAllowed);
     }
     private void requestButton(int id,VehicleRequest.Type type,VehicleRequest request) {
         boolean pending=request.inFlight()&&(request.desired==type || (request.desired==null && request.shared==type));
@@ -178,19 +168,14 @@ public final class DrivingStatusScreen {
     }
     private void action(int id,String label,boolean selected,boolean enabled) {
         Button button=root.findViewById(id);
-        boolean microphone=id==R.id.convoy_mic;
-        button.setText(microphone?"":label); button.setContentDescription(label); button.setTextSize(compact?16:18);
+        button.setText(label); button.setContentDescription(label); button.setTextSize(compact?16:18);
         button.setEnabled(enabled); button.setSelected(selected); button.setAlpha(1f);
         int fill=context.getColor(!enabled?R.color.convoy_disabled:selected?R.color.convoy_ink:R.color.convoy_surface);
         int ink=context.getColor(!enabled?R.color.convoy_muted:selected?R.color.convoy_surface:R.color.convoy_ink);
         button.setTextColor(ink); button.setBackgroundTintList(null);
-        if(microphone) {
-            Drawable icon=AppCompatResources.getDrawable(context,state.voice.muted?R.drawable.convoy_ic_mic_off:R.drawable.convoy_ic_mic).mutate();
-            icon.setTint(ink); button.setCompoundDrawablesRelativeWithIntrinsicBounds(icon,null,null,null);
-        }
         int border=context.getColor(!enabled?R.color.convoy_disabled:selected?R.color.convoy_ink:R.color.convoy_line);
         int pressed=context.getColor(selected?R.color.convoy_accent_hover:R.color.convoy_hover);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(pressed),VehicleStatusCard.shape(context,fill,border,microphone?32:6),null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(pressed),VehicleStatusCard.shape(context,fill,border,6),null));
     }
     private void showScenarios() {
         if(!BuildConfig.DEBUG || state==null || !state.trip.detailsAllowed) return;

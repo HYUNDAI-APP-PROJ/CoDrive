@@ -2,7 +2,6 @@ package com.codrive.convoy.ui;
 
 import com.codrive.convoy.data.model.*;
 import com.codrive.convoy.domain.usecase.TripComparison;
-import com.codrive.voice.data.model.VoiceSession;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,23 +19,19 @@ public final class DrivingStatusUiState {
     }
     public final TripStatus trip;
     public final TripComparison comparison;
-    public final VoiceSession voice;
     public final List<Notice> notices;
     public final long now;
     public final ZoneId zone;
     public final String destinationSummary, arrivalSummary, comparisonScope;
-    public final int joinedCount;
 
-    public DrivingStatusUiState(TripStatus trip,VoiceSession voice,long now,ZoneId zone) {
-        this.trip=trip; this.voice=voice; this.now=now; this.zone=zone; comparison=new TripComparison(trip);
-        int applied=0, joined=voice.state==VoiceSession.State.JOINED ? 1 : 0;
+    public DrivingStatusUiState(TripStatus trip,long now,ZoneId zone) {
+        this.trip=trip; this.now=now; this.zone=zone; comparison=new TripComparison(trip);
+        int applied=0;
         List<Notice> list=new ArrayList<>();
         for(VehicleStatus v:trip.vehicles) {
             if(trip.sameDestination(v)) applied++;
             else if(v.applied==VehicleStatus.Applied.FAILED || v.applied==VehicleStatus.Applied.APPLIED)
                 list.add(new Notice("destination-"+v.vehicleId,v.vehicleId,v.displayName+" · 목적지 확인 필요",1,0));
-            if(!v.vehicleId.equals(trip.currentVehicleId) && v.voice.state==VoiceSession.State.JOINED
-                    && v.connection==VehicleStatus.Connection.ONLINE) joined++;
             for(VehicleStatus.Alert alert:v.alerts) if(alert.active) {
                 boolean old=v.connection!=VehicleStatus.Connection.ONLINE || v.alertsQuality!=Measurement.Quality.AVAILABLE;
                 list.add(new Notice(alert.id,v.vehicleId,v.displayName+" · "+alert.message+(old ? " · 마지막 수신 경고" : ""),
@@ -52,7 +47,7 @@ public final class DrivingStatusUiState {
                     v.displayName+" · "+DrivingText.request(v.request.shared)+" 요청 중",3,v.request.createdAt));
         }
         list.sort(Comparator.comparingInt((Notice n)->n.priority).thenComparingLong(n->n.at).thenComparing(n->n.id));
-        notices=Collections.unmodifiableList(list); joinedCount=joined;
+        notices=Collections.unmodifiableList(list);
         destinationSummary=applied==trip.vehicles.size() ? applied+"대 목적지 동일" : applied==0 ? "목적지 확인 중" : applied+"/"+trip.vehicles.size()+"대 목적지 반영";
         arrivalSummary=comparison.allArrived ? "모두 도착했어요" : comparison.arrivalGapMillis==null ? "도착 정보 확인 중"
                 : comparison.arrivalGapMillis<60000 ? "도착 차이 1분 미만" : "도착 차이 "+Math.round(comparison.arrivalGapMillis/60000d)+"분";

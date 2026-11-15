@@ -6,8 +6,6 @@ import com.codrive.convoy.data.source.*;
 import com.codrive.convoy.domain.usecase.TripComparison;
 import com.codrive.convoy.ui.DrivingStatusUiState;
 import com.codrive.convoy.ui.DrivingText;
-import com.codrive.voice.data.model.VoiceSession;
-import com.codrive.voice.data.repository.MockVoiceSessionController;
 import org.junit.Test;
 import java.io.*;
 import java.time.ZoneId;
@@ -30,7 +28,7 @@ public class DrivingStatusTest {
     private TripStatus replace(TripStatus trip,int index,VehicleStatus.Builder b) {
         List<VehicleStatus> next=new ArrayList<>(trip.vehicles); next.set(index,b.build()); return trip.withVehicles(next);
     }
-    private DrivingStatusUiState ui(TripStatus trip) { return new DrivingStatusUiState(trip,VoiceSession.idle(),NOW,ZoneId.of("Asia/Seoul")); }
+    private DrivingStatusUiState ui(TripStatus trip) { return new DrivingStatusUiState(trip,NOW,ZoneId.of("Asia/Seoul")); }
 
     @Test public void demoStartsAt1430InTheSelectedTimezoneAndKeepsItOnReset() {
         for(String name:new String[]{"Asia/Seoul","America/Los_Angeles","UTC"}) {
@@ -39,7 +37,7 @@ public class DrivingStatusTest {
             MockVehicleStatusRepository repo=new MockVehicleStatusRepository(clock,new Queue(),null);
             assertEquals("14:30",DrivingText.clock(repo.now(),zone));
             repo.advance(11000); repo.select(DemoScenario.NORMAL);
-            DrivingStatusUiState state=new DrivingStatusUiState(repo.current(),VoiceSession.idle(),repo.now(),zone);
+            DrivingStatusUiState state=new DrivingStatusUiState(repo.current(),repo.now(),zone);
             assertEquals("42km · 15:18 도착 예정",state.arrivalDetail(repo.current().mine()));
         }
     }
@@ -194,24 +192,6 @@ public class DrivingStatusTest {
         com.codrive.convoy.data.repository.VehicleStatusRepository.Subscription sub=r.observe(t->calls[0]++);
         sub.close(); r.advance(1); assertEquals(1,calls[0]);
     }
-    @Test public void voiceFailureRetryMutedEntryAndLeaveHaveConsistentState() {
-        Queue q=new Queue(); MockVoiceSessionController voice=new MockVoiceSessionController(q::after,null); voice.reset(true);
-        voice.join(); voice.join(); assertEquals(1,q.tasks.size()); assertEquals(VoiceSession.State.CONNECTING,voice.current().state);
-        q.drain(); assertEquals(VoiceSession.State.FAILED,voice.current().state); voice.join(); q.drain();
-        assertEquals(VoiceSession.State.JOINED,voice.current().state); assertTrue(voice.current().muted);
-        voice.toggleMuted(); assertFalse(voice.current().muted); voice.leave(); assertTrue(voice.current().muted);
-        assertEquals(VoiceSession.State.NOT_JOINED,voice.current().state);
-    }
-    @Test public void leavingDuringVoiceConnectionIgnoresLateSuccess() {
-        Queue q=new Queue(); MockVoiceSessionController voice=new MockVoiceSessionController(q::after,null);
-        voice.join(); voice.leave(); q.drain(); assertEquals(VoiceSession.State.NOT_JOINED,voice.current().state);
-    }
-    @Test public void voicePendingStateSurvivesSerialization() throws Exception {
-        Queue q=new Queue(); MockVoiceSessionController voice=new MockVoiceSessionController(q::after,null); voice.join();
-        MockVoiceSessionController.Snapshot saved=roundTrip(voice.save()); voice.close();
-        Queue next=new Queue(); MockVoiceSessionController restored=new MockVoiceSessionController(next::after,saved);
-        assertEquals(1,next.tasks.size()); next.drain(); assertEquals(VoiceSession.State.JOINED,restored.current().state); assertTrue(restored.current().muted);
-    }
     @Test public void alertsHaveStablePriorityAndDisconnectedWarningsAreIdentified() {
         DrivingStatusUiState state=ui(fixture(DemoScenario.WARNINGS)); assertEquals("tire-a",state.notices.get(0).id);
         assertTrue(ui(fixture(DemoScenario.OFFLINE)).notices.get(0).text.contains("마지막 수신 경고"));
@@ -224,11 +204,10 @@ public class DrivingStatusTest {
         TripStatus privateTrip=fixture(DemoScenario.PRIVATE_UNSUPPORTED);
         assertEquals(UNSUPPORTED,privateTrip.vehicles.get(1).fuel.quality); assertNull(privateTrip.vehicles.get(2).battery.value);
     }
-    @Test public void allScenariosProduceBoundedCoordinatesAndHonestVoiceCounts() {
+    @Test public void allScenariosProduceBoundedCoordinatesAndArrivalSummaries() {
         for(DemoScenario scenario:DemoScenario.values()) {
             TripStatus trip=fixture(scenario); DrivingStatusUiState state=ui(trip);
             for(double p:state.comparison.positions.values()) assertTrue(Double.isFinite(p)&&p>=0&&p<=1);
-            assertTrue(state.joinedCount<trip.vehicles.size());
             assertNotNull(state.arrivalSummary);
         }
     }

@@ -7,10 +7,8 @@
     <string name="convoy_track_help">남은 주행거리 비교입니다. 차량 간 실제 거리나 여행 완료율이 아닙니다.</string>
     <string name="convoy_rest">휴식 요청</string>
     <string name="convoy_energy">충전 요청</string>
-    <string name="convoy_voice">음성 참여</string>
-    <string name="convoy_mic">마이크 켜기</string>
     <string name="convoy_demo_title">시연 설정</string>
-    <string name="convoy_demo_description">실제 차량·서버·마이크에 연결하지 않는 모의 화면입니다.</string>
+    <string name="convoy_demo_description">실제 차량·서버에 연결하지 않는 모의 화면입니다.</string>
     <string name="convoy_done">닫기</string>
     <string name="convoy_recover">연결·정보 복구</string>
     <string name="convoy_advance">11초 경과</string>
