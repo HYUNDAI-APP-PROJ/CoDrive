@@ -44,10 +44,6 @@ public final class DrivingStatusScreen {
             demo.setContentDescription(context.getString(R.string.convoy_demo_settings));
             demo.setOnClickListener(v->showScenarios());
         }
-        root.findViewById(R.id.convoy_track).setOnClickListener(v->{
-            if(state!=null && state.trip.detailsAllowed) showDialog(new AlertDialog.Builder(context)
-                    .setTitle(R.string.convoy_distance_heading).setMessage(R.string.convoy_track_help).setPositiveButton(R.string.convoy_done,null));
-        });
     }
     private int dp(float n) { return Math.round(n*context.getResources().getDisplayMetrics().density); }
     private void height(int id,int value) { View v=root.findViewById(id); v.getLayoutParams().height=dp(value); v.requestLayout(); }
