@@ -1,6 +1,6 @@
 <resources>
     <string name="convoy_brand">CoDrive</string>
-    <string name="convoy_title">함께 주행 중</string>
+    <string name="convoy_title">실시간 주행</string>
     <string name="convoy_demo">시연 데이터</string>
     <string name="convoy_demo_settings">시연 데이터 · 설정 열기</string>
     <string name="convoy_distance_heading">목적지까지 남은 거리</string>
@@ -20,4 +20,6 @@
     <string name="convoy_nav_history">여행 기록</string>
     <string name="convoy_nav_current">실시간 주행, 현재 화면</string>
     <string name="convoy_nav_unavailable">%1$s, 현재 화면에서는 사용할 수 없음</string>
+    <string name="convoy_vehicle_status">차량 상태</string>
+    <string name="convoy_vehicle_count">차량 %1$d대</string>
 </resources>

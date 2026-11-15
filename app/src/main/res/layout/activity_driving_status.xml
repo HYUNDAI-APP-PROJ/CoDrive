@@ -23,7 +23,7 @@
                     android:stateListAnimator="@animator/convoy_button_press" />
             </LinearLayout>
             <LinearLayout android:id="@+id/convoy_destination_panel" android:layout_width="match_parent" android:layout_height="300dp"
-                android:layout_marginTop="8dp" android:padding="16dp" android:orientation="vertical" android:background="@drawable/convoy_destination_panel">
+                android:layout_marginTop="24dp" android:padding="24dp" android:orientation="vertical" android:background="@drawable/convoy_destination_panel">
                 <LinearLayout android:id="@+id/convoy_header" android:layout_width="match_parent" android:layout_height="76dp" android:gravity="center_vertical" android:baselineAligned="false">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginEnd="16dp">
                         <TextView android:id="@+id/convoy_destination" style="@style/ConvoyText" android:textSize="36sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
@@ -37,13 +37,19 @@
                 <com.codrive.convoy.ui.RemainingDistanceTrack android:id="@+id/convoy_track"
                     android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:importantForAccessibility="yes" />
             </LinearLayout>
+            <LinearLayout android:id="@+id/convoy_cards_header" android:layout_width="match_parent" android:layout_height="32dp"
+                android:layout_marginTop="24dp" android:layout_marginBottom="12dp" android:gravity="center_vertical" android:baselineAligned="false">
+                <TextView style="@style/ConvoyText" android:layout_width="0dp" android:layout_weight="1" android:text="@string/convoy_vehicle_status"
+                    android:textSize="22sp" android:fontFamily="sans-serif-medium" />
+                <TextView android:id="@+id/convoy_card_count" style="@style/ConvoyText.Muted" />
+            </LinearLayout>
             <LinearLayout android:id="@+id/convoy_cards" android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:layout_marginTop="12dp" android:orientation="horizontal" android:baselineAligned="false" />
+                android:layout_weight="0" android:orientation="horizontal" android:baselineAligned="false" />
             <TextView android:id="@+id/convoy_alert" style="@style/ConvoyText.Muted" android:layout_width="match_parent"
                 android:layout_height="40dp" android:gravity="center_vertical" android:drawableStart="@drawable/convoy_ic_alert" android:drawablePadding="8dp" android:accessibilityLiveRegion="polite" android:maxLines="2" />
-            <LinearLayout android:id="@+id/convoy_actions" android:layout_width="match_parent" android:layout_height="64dp" android:layout_marginTop="12dp" android:baselineAligned="false">
-                <androidx.appcompat.widget.AppCompatButton android:id="@+id/convoy_rest" style="@style/ConvoyAction" android:text="@string/convoy_rest" />
-                <androidx.appcompat.widget.AppCompatButton android:id="@+id/convoy_energy" style="@style/ConvoyAction" android:layout_marginStart="12dp" android:text="@string/convoy_energy" />
+            <LinearLayout android:id="@+id/convoy_actions" android:layout_width="match_parent" android:layout_height="64dp" android:layout_marginTop="24dp" android:baselineAligned="false">
+                <com.google.android.material.button.MaterialButton android:id="@+id/convoy_rest" style="@style/ConvoyAction" android:text="@string/convoy_rest" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/convoy_energy" style="@style/ConvoyAction" android:layout_marginStart="12dp" android:text="@string/convoy_energy" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

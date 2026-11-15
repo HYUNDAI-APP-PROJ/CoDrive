@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.core.widget.TextViewCompat;
 import com.codrive.R;
@@ -42,6 +43,11 @@ public final class VehicleStatusCard {
         GradientDrawable background=shape(context,color(R.color.convoy_surface),own?ink:line,8);
         if(own) background.setStroke(dp(2),ink);
         view.setBackground(new RippleDrawable(ColorStateList.valueOf(color(R.color.convoy_hover)),background,null));
+        if(!compact) {
+            ImageView icon=view.findViewById(R.id.convoy_card_icon);
+            icon.setImageTintList(ColorStateList.valueOf(own?color(R.color.convoy_surface):ink));
+            icon.setBackground(shape(context,own?ink:color(R.color.convoy_background),own?ink:line,6));
+        }
         show(R.id.convoy_card_name,vehicle.displayOrder+"  "+vehicle.displayName,ink);
         String freshness=state.freshness(vehicle);
         String motion=state.motion(vehicle);
@@ -60,7 +66,7 @@ public final class VehicleStatusCard {
         String eta=state.eta(vehicle);
         show(R.id.convoy_card_eta,eta,ink);
         TextView etaView=text(R.id.convoy_card_eta);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(etaView,compact?20:26,compact?26:shortWindow?40:44,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(etaView,compact?20:24,compact?26:36,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         etaView.setMaxLines(1);
         show(R.id.convoy_card_arrival,state.arrivalDetail(vehicle),muted);
         show(R.id.convoy_card_relative,compact||shortWindow ? "" : state.relative(vehicle),muted);
@@ -69,7 +75,7 @@ public final class VehicleStatusCard {
         String energyText=energyName+"  "+(energy.hasLastValue()?Math.round(energy.value)+"%":DrivingText.quality(energy,state.now));
         if(energy.quality==Measurement.Quality.STALE) energyText+=" · 마지막 정보";
         show(R.id.convoy_card_energy,energyText,ink);
-        text(R.id.convoy_card_energy).setTextSize(energy.hasLastValue()?compact?20:22:compact?16:18);
+        text(R.id.convoy_card_energy).setTextSize(energy.hasLastValue()?20:compact?16:18);
         ProgressBar meter=view.findViewById(R.id.convoy_card_meter);
         meter.setVisibility(energy.hasLastValue()?View.VISIBLE:View.GONE);
         if(energy.hasLastValue()) meter.setProgress((int)Math.round(energy.value));
@@ -87,6 +93,10 @@ public final class VehicleStatusCard {
             if(notice.contains("잔량")) notice="잔량 낮음";
         }
         show(R.id.convoy_card_notice,notice,ink);
+        TextView noticeView=text(R.id.convoy_card_notice);
+        noticeView.setMaxLines(1); noticeView.setEllipsize(TextUtils.TruncateAt.END);
+        noticeView.setMinHeight(dp(20));
+        noticeView.setVisibility(notice.isEmpty()?View.INVISIBLE:View.VISIBLE);
         show(R.id.convoy_card_connection,compact?"":freshness,muted);
         if(!compact) view.setPadding(dp(16),dp(shortWindow?12:16),dp(16),dp(shortWindow?12:16));
         view.setContentDescription(vehicle.displayName+". "+state.motion(vehicle)+". "+eta+". "+state.arrivalDetail(vehicle)

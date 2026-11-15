@@ -93,15 +93,15 @@ public final class RemainingDistanceTrack extends View {
         compact = getWidth() / density < 1000;
         float height = getHeight() / density;
         boolean spacious = getWidth() / density >= 900 && height >= 300;
-        labelSize = spacious ? 36 : height >= 240 ? 30 : height >= 170 ? 24 : height >= 145 ? 18 : 16;
-        headingSize = spacious ? 36 : height >= 240 ? 32 : height >= 170 ? 28 : height >= 145 ? 22 : 20;
-        axisSize = spacious ? 24 : height >= 240 ? 22 : height >= 170 ? 20 : height >= 145 ? 18 : 16;
+        labelSize = spacious ? 28 : height >= 240 ? 26 : height >= 170 ? 24 : height >= 145 ? 18 : 16;
+        headingSize = height >= 240 ? 24 : 20;
+        axisSize = height >= 240 ? 20 : 16;
         detailScale = axisSize / 16;
         laneTop = dp(headingSize + 12);
         float bottomSpace = excludedLabel.isEmpty() ? axisSize <= 16 ? 32 : axisSize + 20 : axisSize * 2 + 22;
         baseline = Math.max(laneTop, getHeight() - dp(bottomSpace));
         float rowHeight = (baseline - laneTop) / Math.max(1, markers.size());
-        carScale = Math.max(0.8f, Math.min(2.6f, Math.min(height / 125f, (rowHeight / density - 4) / 24f)));
+        carScale = Math.max(0.8f, Math.min(2.2f, Math.min(height / 125f, (rowHeight / density - 4) / 24f)));
         left = dp(23 * carScale + 12);
         right = Math.max(left, getWidth() - dp(compact ? 76 : spacious ? 132 : 108));
         paint.setFakeBoldText(true);
@@ -120,7 +120,7 @@ public final class RemainingDistanceTrack extends View {
             marker.y = laneTop + rowHeight * (i + 0.5f);
             float width = paint.measureText(marker.label) + dp(20);
             float labelLeft = marker.x + labelOffset;
-            if (labelLeft + width > getWidth()) labelLeft = marker.x - labelOffset - width;
+            if (labelLeft + width > right - dp(12 * detailScale)) labelLeft = marker.x - labelOffset - width;
             labelLeft = Math.max(0, labelLeft);
             marker.labelBounds.set(labelLeft, marker.y - labelHeight / 2,
                     labelLeft + width, marker.y + labelHeight / 2);
