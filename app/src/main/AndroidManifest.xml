@@ -15,6 +15,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CoDrive">
+        <activity android:name="com.codrive.group.ui.lobby.GroupLobbyActivity"
+            android:resizeableActivity="true"
+            android:exported="false" android:theme="@style/Theme.CoDrive.Group"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.codrive.group.ui.waiting.GroupWaitingActivity"
+            android:resizeableActivity="true"
+            android:exported="false" android:theme="@style/Theme.CoDrive.Group"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.codrive.app.MainActivity"
+            android:resizeableActivity="true"
+            android:exported="true" android:theme="@style/Theme.CoDrive.Group">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
         <activity android:name=".app.MainActivity" android:exported="true" android:theme="@style/Theme.CoDrive.Recommendation" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
