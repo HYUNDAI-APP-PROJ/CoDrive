@@ -43,7 +43,8 @@ public final class DrivingStatusUiState {
                         ? "충전 경유 검토 · 시연" : energyName(v)+" 잔량 "+Math.round(energy.value)+"%";
                 list.add(new Notice("energy-"+v.vehicleId,v.vehicleId,v.displayName+" · "+msg,2,energy.observedAt));
             }
-            if(v.request.shared!=null) list.add(new Notice("request-"+v.vehicleId,v.vehicleId,
+            // Local requests already have button/card feedback; do not resize the screen for them.
+            if(v.request.shared!=null && !v.vehicleId.equals(trip.currentVehicleId)) list.add(new Notice("request-"+v.vehicleId,v.vehicleId,
                     v.displayName+" · "+DrivingText.request(v.request.shared)+" 요청 중",3,v.request.createdAt));
         }
         list.sort(Comparator.comparingInt((Notice n)->n.priority).thenComparingLong(n->n.at).thenComparing(n->n.id));

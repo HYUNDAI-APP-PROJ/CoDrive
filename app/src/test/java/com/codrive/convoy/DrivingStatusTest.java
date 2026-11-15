@@ -146,6 +146,23 @@ public class DrivingStatusTest {
         List<VehicleStatus> reversed=new ArrayList<>(trip.vehicles); Collections.reverse(reversed);
         assertEquals("a",trip.withVehicles(reversed).vehicles.get(1).vehicleId);
     }
+    @Test public void verticalTimelineOrdersOnlyValidVehiclesFromNearestToFarthest() {
+        TripComparison normal=new TripComparison(fixture(DemoScenario.NORMAL));
+        List<String> ids=new ArrayList<>();
+        for(VehicleStatus vehicle:normal.vehiclesByRemainingDistance) ids.add(vehicle.vehicleId);
+        assertEquals(Arrays.asList("a","self","b"),ids);
+        TripComparison offline=new TripComparison(fixture(DemoScenario.OFFLINE));
+        assertEquals(2,offline.vehiclesByRemainingDistance.size());
+        assertFalse(offline.vehiclesByRemainingDistance.stream().anyMatch(v->v.vehicleId.equals("b")));
+        assertTrue(new TripComparison(fixture(DemoScenario.NO_DATA)).vehiclesByRemainingDistance.isEmpty());
+    }
+    @Test public void equalDistanceTimelineKeepsIdentityAndDoesNotAssumeArrival() {
+        TripComparison zero=new TripComparison(fixture(DemoScenario.ZERO_DISTANCE));
+        List<String> ids=new ArrayList<>();
+        for(VehicleStatus vehicle:zero.vehiclesByRemainingDistance) ids.add(vehicle.vehicleId);
+        assertEquals(Arrays.asList("self","a","b"),ids); assertFalse(zero.allArrived);
+        assertThrows(UnsupportedOperationException.class,()->zero.vehiclesByRemainingDistance.clear());
+    }
     @Test public void requestDoubleTapDoesNotDuplicateAndLateResponseCannotReplaceNewIntent() {
         Queue queue=new Queue(); MockVehicleStatusRepository r=repository(queue);
         r.toggleRequest(REST); long first=r.current().mine().request.id; r.toggleRequest(REST);
@@ -170,10 +187,27 @@ public class DrivingStatusTest {
         r.toggleRequest(REST); assertEquals(VehicleRequest.Status.CANCELLING,r.current().mine().request.status); q.drain();
         assertEquals(VehicleRequest.Status.IDLE,r.current().mine().request.status); assertNull(r.current().mine().request.shared);
     }
+    @Test public void localRequestsStayInTheCardWithoutAddingAGlobalNotice() {
+        for(VehicleRequest.Type type:new VehicleRequest.Type[]{REST,CHARGE}) {
+            Queue queue=new Queue(); MockVehicleStatusRepository r=repository(queue);
+            r.toggleRequest(type);
+            assertTrue(ui(r.current()).notices.isEmpty());
+            queue.drain();
+            assertTrue(ui(r.current()).notices.isEmpty());
+            assertEquals(type,r.current().mine().request.shared);
+            assertTrue(ui(r.current()).cardNotice(r.current().mine()).contains(DrivingText.request(type)));
+            r.toggleRequest(type);
+            assertTrue(ui(r.current()).notices.isEmpty());
+            queue.drain();
+            assertTrue(ui(r.current()).notices.isEmpty());
+            assertNull(r.current().mine().request.shared);
+        }
+    }
     @Test public void peerRequestsCannotBeCancelledByLocalButtons() {
         Queue q=new Queue(); MockVehicleStatusRepository r=repository(q); r.select(DemoScenario.PEER_REQUEST);
         r.toggleRequest(REST); q.drain(); r.toggleRequest(REST); q.drain();
         assertEquals(REST,r.current().vehicles.get(1).request.shared);
+        assertTrue(ui(r.current()).notices.stream().anyMatch(n->n.id.equals("request-a")));
     }
     @Test public void scenarioReplacementInvalidatesPendingRequestCallbacks() {
         Queue q=new Queue(); MockVehicleStatusRepository r=repository(q); r.toggleRequest(REST);

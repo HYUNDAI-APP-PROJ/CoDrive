@@ -26,6 +26,7 @@ public final class DrivingStatusActivity extends AppCompatActivity {
     private static final String SAVED_SESSION="convoy.session";
     private DrivingStatusViewModel model;
     private DrivingStatusScreen screen;
+    private Runnable stopRouteUpdates=()->{};
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
@@ -58,8 +59,16 @@ public final class DrivingStatusActivity extends AppCompatActivity {
         model.state().observe(this,screen::bind);
         ViewCompat.requestApplyInsets(root);
     }
+    @Override protected void onStart() {
+        super.onStart();
+        stopRouteUpdates=RoutePanelStore.observe(this,()->runOnUiThread(()->screen.bindRoute(RoutePanelStore.read(this))));
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        screen.bindRoute(RoutePanelStore.read(this));
+    }
     @Override protected void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putSerializable(SAVED_SESSION,model.save()); super.onSaveInstanceState(outState);
     }
-    @Override protected void onStop() { screen.close(); super.onStop(); }
+    @Override protected void onStop() { stopRouteUpdates.run(); screen.close(); super.onStop(); }
 }

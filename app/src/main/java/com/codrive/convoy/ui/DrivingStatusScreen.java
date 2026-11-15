@@ -3,12 +3,15 @@ package com.codrive.convoy.ui;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
+import com.google.android.material.button.MaterialButton;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.content.res.AppCompatResources;
 import com.codrive.BuildConfig;
 import com.codrive.R;
 import com.codrive.convoy.data.model.*;
@@ -23,6 +26,7 @@ public final class DrivingStatusScreen {
     private final DrivingStatusViewModel model;
     private final List<VehicleStatusCard> cards=new ArrayList<>();
     private DrivingStatusUiState state;
+    private RoutePanelState routeState=RoutePanelState.empty();
     private boolean compact, shortWindow, briefHeader;
     private int lastWidth=-1,lastHeight=-1,lastVehicleCount=-1;
     private boolean lastHasNotice;
@@ -42,10 +46,11 @@ public final class DrivingStatusScreen {
             demo.setContentDescription(context.getString(R.string.convoy_demo_settings));
             demo.setOnClickListener(v->showScenarios());
         }
-        root.findViewById(R.id.convoy_track).setOnClickListener(v->{
-            if(state!=null && state.trip.detailsAllowed) showDialog(new AlertDialog.Builder(context)
-                    .setTitle(R.string.convoy_distance_heading).setMessage(R.string.convoy_track_help).setPositiveButton(R.string.convoy_done,null));
-        });
+        View routeButton=root.findViewById(R.id.convoy_route_compact);
+        routeButton.setBackground(new RippleDrawable(ColorStateList.valueOf(context.getColor(R.color.convoy_hover)),
+                VehicleStatusCard.shape(context,context.getColor(R.color.convoy_surface),context.getColor(R.color.convoy_line),6),null));
+        routeButton.setOnClickListener(v->showCurrentRoute());
+        bindRoute(routeState);
     }
     private int dp(float n) { return Math.round(n*context.getResources().getDisplayMetrics().density); }
     private void height(int id,int value) { View v=root.findViewById(id); v.getLayoutParams().height=dp(value); v.requestLayout(); }
@@ -62,41 +67,58 @@ public final class DrivingStatusScreen {
         float density=context.getResources().getDisplayMetrics().density;
         float windowDp=windowWidth/density;
         int railWidth=windowDp<=600?0:windowDp<=1100?80:220;
+        int routeWidth=windowDp>1100?280:windowDp>760?220:0;
+        int compactRouteHeight=routeWidth==0?60:0;
         int horizontal=windowDp<=600?16:windowDp<=1100?24:40;
         boolean lowWindow=windowHeight/density<700;
         int top=lowWindow?12:windowDp<=600?20:windowDp<=1100?24:28;
         int bottom=lowWindow?12:windowDp<=600?20:24;
-        int availableWidth=Math.min(dp(1040),windowWidth-dp(railWidth+horizontal*2));
+        int availableWidth=Math.min(dp(1040),windowWidth-dp(railWidth+routeWidth+horizontal*2));
         int availableHeight=windowHeight-dp(top+bottom);
         View sidebar=root.findViewById(R.id.convoy_sidebar);
         sidebar.setVisibility(railWidth==0?View.GONE:View.VISIBLE);
         sidebar.getLayoutParams().width=dp(railWidth); sidebar.requestLayout();
         int railInset=dp(railWidth==220?16:8);
         root.findViewById(R.id.convoy_sidebar_content).setPadding(railInset,dp(28),railInset,dp(24));
+        View routePanel=root.findViewById(R.id.convoy_route_sidebar);
+        routePanel.setVisibility(routeWidth==0?View.GONE:View.VISIBLE);
+        routePanel.getLayoutParams().width=dp(routeWidth);
+        int routeInset=dp(routeWidth==280?24:20);
+        routePanel.setPadding(routeInset,dp(routeWidth==280?32:28),routeInset,dp(24)); routePanel.requestLayout();
+        root.findViewById(R.id.convoy_route_compact).setVisibility(routeWidth==0?View.VISIBLE:View.GONE);
         root.findViewById(R.id.convoy_main_host).setPadding(dp(horizontal),dp(top),dp(horizontal),dp(bottom));
         View content=root.findViewById(R.id.convoy_content);
         content.getLayoutParams().width=availableWidth; content.requestLayout();
         compact=availableWidth/density<1000;
         briefHeader=availableHeight/density<700;
-        int topbar=64, alert=compact?32:40;
+        int topbar=64, alert=compact?36:40;
         int usableHeight=Math.round(availableHeight/density);
-        boolean spacious=!compact && usableHeight>=850;
-        boolean tallCompact=compact && usableHeight>=850;
-        int contentHeight=usableHeight-topbar-64-(hasNotice?alert:0)-32;
+        int panelGap=briefHeader?12:24, actionsGap=briefHeader?12:24;
+        int sectionGap=briefHeader?12:68;
         int cardGaps=Math.max(0,vehicleCount-1)*8;
-        int minimumCards=compact?vehicleCount*(briefHeader?64:68)+cardGaps:240;
-        // Aim for half the app window, reserving readable cards and the 64dp actions.
-        int panelHeight=Math.max(0,Math.min(Math.round(usableHeight*0.52f),contentHeight-minimumCards));
-        shortWindow=compact?(contentHeight-panelHeight-cardGaps)/Math.max(1,vehicleCount)<80:contentHeight-panelHeight<360;
-        height(R.id.convoy_topbar,topbar); height(R.id.convoy_header,briefHeader?44:compact?tallCompact?88:64:spacious?112:84);
-        height(R.id.convoy_destination_panel,panelHeight); height(R.id.convoy_alert,alert);
+        int cardHeight=compact?vehicleCount*(briefHeader?64:88)+cardGaps:briefHeader?220:260;
+        int panelHeight=Math.max(0,usableHeight-topbar-cardHeight-64-(hasNotice?alert:0)-panelGap-actionsGap-sectionGap
+                -compactRouteHeight-(briefHeader?0:48));
+        shortWindow=compact||cardHeight<330;
+        height(R.id.convoy_topbar,topbar);
+        height(R.id.convoy_header,briefHeader?44:compact?76:96);
+        height(R.id.convoy_destination_panel,panelHeight);
+        height(R.id.convoy_cards,cardHeight);
+        height(R.id.convoy_alert,alert);
+        root.findViewById(R.id.convoy_cards_header).setVisibility(briefHeader?View.GONE:View.VISIBLE);
+        View cards=root.findViewById(R.id.convoy_cards);
+        ((LinearLayout.LayoutParams)cards.getLayoutParams()).topMargin=dp(briefHeader?12:0);
+        cards.requestLayout();
+        View actions=root.findViewById(R.id.convoy_actions);
+        ((LinearLayout.LayoutParams)actions.getLayoutParams()).topMargin=dp(actionsGap); actions.requestLayout();
         View panel=root.findViewById(R.id.convoy_destination_panel);
-        int inset=dp(compact?12:spacious?24:16); panel.setPadding(inset,inset,inset,inset);
-        ((TextView)root.findViewById(R.id.convoy_page_title)).setTextSize(briefHeader?24:28);
-        ((TextView)root.findViewById(R.id.convoy_destination)).setTextSize(compact?tallCompact?36:28:spacious?52:44);
-        ((TextView)root.findViewById(R.id.convoy_arrival_summary)).setTextSize(compact?tallCompact?28:22:spacious?40:34);
-        ((TextView)root.findViewById(R.id.convoy_destination_summary)).setTextSize(compact?tallCompact?18:14:spacious?24:20);
-        ((TextView)root.findViewById(R.id.convoy_comparison_scope)).setTextSize(compact?tallCompact?16:14:spacious?22:18);
+        ((LinearLayout.LayoutParams)panel.getLayoutParams()).topMargin=dp(panelGap);
+        int inset=dp(compact?16:24); panel.setPadding(inset,inset,inset,inset);
+        ((TextView)root.findViewById(R.id.convoy_page_title)).setTextSize(28);
+        ((TextView)root.findViewById(R.id.convoy_destination)).setTextSize(compact?28:36);
+        ((TextView)root.findViewById(R.id.convoy_arrival_summary)).setTextSize(compact?24:32);
+        ((TextView)root.findViewById(R.id.convoy_destination_summary)).setTextSize(compact?14:18);
+        ((TextView)root.findViewById(R.id.convoy_comparison_scope)).setTextSize(compact?14:16);
         root.findViewById(R.id.convoy_destination_summary).setVisibility(briefHeader?View.GONE:View.VISIBLE);
         root.findViewById(R.id.convoy_comparison_scope).setVisibility(briefHeader?View.GONE:View.VISIBLE);
         rebuildCards();
@@ -114,6 +136,20 @@ public final class DrivingStatusScreen {
         }
     }
     private void text(int id,String value) { ((TextView)root.findViewById(id)).setText(value); }
+    public void bindRoute(RoutePanelState route) {
+        routeState=route;
+        ((CurrentRoutePanel)root.findViewById(R.id.convoy_route_sidebar)).bind(route);
+        int label=route.status==RoutePanelState.Status.ACTIVE?R.string.convoy_route_open:
+                route.status==RoutePanelState.Status.LOADING?R.string.convoy_route_compact_loading:R.string.convoy_route_compact_empty;
+        text(R.id.convoy_route_compact,context.getString(label));
+    }
+    private void showCurrentRoute() {
+        if(state==null || !state.trip.detailsAllowed) return;
+        CurrentRoutePanel panel=new CurrentRoutePanel(context); panel.bind(routeState);
+        FrameLayout viewport=new FrameLayout(context);
+        viewport.addView(panel,new FrameLayout.LayoutParams(-1,Math.min(dp(480),Math.max(dp(200),root.getHeight()*2/3))));
+        showDialog(new AlertDialog.Builder(context).setView(viewport).setPositiveButton(R.string.convoy_done,null));
+    }
     public void bind(DrivingStatusUiState state) {
         this.state=state;
         resize(root.getWidth(),root.getHeight());
@@ -132,6 +168,7 @@ public final class DrivingStatusScreen {
         StringBuilder members=new StringBuilder();
         for(VehicleStatus vehicle:state.trip.vehicles) { if(members.length()>0) members.append(" · "); members.append(vehicle.displayName); }
         text(R.id.convoy_members_summary,briefHeader?"차량 "+state.trip.vehicles.size()+"대 · "+state.destinationSummary:members.toString());
+        text(R.id.convoy_card_count,context.getString(R.string.convoy_vehicle_count,state.trip.vehicles.size()));
         text(R.id.convoy_arrival_summary,state.arrivalSummary); text(R.id.convoy_comparison_scope,state.comparisonScope);
         ((RemainingDistanceTrack)root.findViewById(R.id.convoy_track)).bind(state);
         for(int i=0;i<cards.size();i++) {
@@ -141,6 +178,7 @@ public final class DrivingStatusScreen {
         text(R.id.convoy_alert,notice);
         root.findViewById(R.id.convoy_alert).setVisibility(notice.isEmpty()?View.GONE:View.VISIBLE);
         root.findViewById(R.id.convoy_demo).setEnabled(BuildConfig.DEBUG && state.trip.detailsAllowed);
+        root.findViewById(R.id.convoy_route_compact).setEnabled(state.trip.detailsAllowed);
         VehicleRequest request=state.trip.mine().request;
         requestButton(R.id.convoy_rest,VehicleRequest.Type.REST,request);
         requestButton(R.id.convoy_energy,state.energyRequest(),request);
@@ -153,15 +191,22 @@ public final class DrivingStatusScreen {
         action(id,label,request.shared==type,state.trip.actionsAllowed&&!pending);
     }
     private void action(int id,String label,boolean selected,boolean enabled) {
-        Button button=root.findViewById(id);
+        MaterialButton button=root.findViewById(id);
         button.setText(label); button.setContentDescription(label); button.setTextSize(compact?16:18);
         button.setEnabled(enabled); button.setSelected(selected); button.setAlpha(1f);
         int fill=context.getColor(!enabled?R.color.convoy_disabled:selected?R.color.convoy_ink:R.color.convoy_surface);
         int ink=context.getColor(!enabled?R.color.convoy_muted:selected?R.color.convoy_surface:R.color.convoy_ink);
-        button.setTextColor(ink); button.setBackgroundTintList(null);
+        button.setTextColor(ink); button.setBackgroundTintList(ColorStateList.valueOf(fill));
+        int iconId=id==R.id.convoy_rest?R.drawable.convoy_ic_rest:
+                state.energyRequest()==VehicleRequest.Type.REFUEL?R.drawable.convoy_ic_fuel:R.drawable.convoy_ic_charge;
+        Drawable icon=AppCompatResources.getDrawable(context,iconId).mutate();
+        button.setIcon(icon); button.setIconTint(ColorStateList.valueOf(ink));
+        button.setIconSize(dp(24)); button.setIconPadding(dp(8));
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         int border=context.getColor(!enabled?R.color.convoy_disabled:selected?R.color.convoy_ink:R.color.convoy_line);
         int pressed=context.getColor(selected?R.color.convoy_accent_hover:R.color.convoy_hover);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(pressed),VehicleStatusCard.shape(context,fill,border,6),null));
+        button.setStrokeWidth(dp(1)); button.setStrokeColor(ColorStateList.valueOf(border));
+        button.setCornerRadius(dp(6)); button.setRippleColor(ColorStateList.valueOf(pressed));
     }
     private void showScenarios() {
         if(!BuildConfig.DEBUG || state==null || !state.trip.detailsAllowed) return;
