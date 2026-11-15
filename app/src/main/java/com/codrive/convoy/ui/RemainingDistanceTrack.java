@@ -12,16 +12,14 @@ import com.codrive.convoy.data.model.VehicleStatus;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Cars and labels may change lanes vertically; their distance-based x coordinates never move. */
+/** Vehicle rows share one distance axis; their distance-based x coordinates never move. */
 public final class RemainingDistanceTrack extends View {
     private static final class Marker {
         final String label;
         final boolean own;
         final float position;
         final RectF labelBounds = new RectF();
-        final RectF bounds = new RectF();
         float x, y;
-        int lane;
 
         Marker(String label, boolean own, float position) {
             this.label = label;
@@ -38,7 +36,8 @@ public final class RemainingDistanceTrack extends View {
     private final String heading;
     private String maxDistanceLabel = "", excludedLabel = "";
     private boolean compact;
-    private float left, right, baseline;
+    private float left, right, baseline, laneTop;
+    private float labelSize, headingSize, axisSize, carScale, detailScale;
 
     public RemainingDistanceTrack(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -90,35 +89,43 @@ public final class RemainingDistanceTrack extends View {
     }
 
     private void layoutMarkers() {
-        compact = getWidth() / getResources().getDisplayMetrics().density < 1000;
-        left = dp(28); right = Math.max(left, getWidth() - dp(64));
-        baseline = getHeight() - dp(excludedLabel.isEmpty() ? 24 : 42);
-        paint.setTextSize(sp(compact ? 14 : 16));
+        float density = getResources().getDisplayMetrics().density;
+        compact = getWidth() / density < 1000;
+        float height = getHeight() / density;
+        boolean spacious = getWidth() / density >= 1400 && height >= 300;
+        labelSize = spacious ? 36 : height >= 240 ? 30 : height >= 170 ? 24 : height >= 145 ? 18 : 16;
+        headingSize = spacious ? 36 : height >= 240 ? 32 : height >= 170 ? 28 : height >= 145 ? 22 : 20;
+        axisSize = spacious ? 24 : height >= 240 ? 22 : height >= 170 ? 20 : height >= 145 ? 18 : 16;
+        detailScale = axisSize / 16;
+        laneTop = dp(headingSize + 12);
+        float bottomSpace = excludedLabel.isEmpty() ? axisSize <= 16 ? 32 : axisSize + 20 : axisSize * 2 + 22;
+        baseline = Math.max(laneTop, getHeight() - dp(bottomSpace));
+        float rowHeight = (baseline - laneTop) / Math.max(1, markers.size());
+        carScale = Math.max(0.8f, Math.min(2.6f, Math.min(height / 125f, (rowHeight / density - 4) / 24f)));
+        left = dp(23 * carScale + 12);
+        right = Math.max(left, getWidth() - dp(compact ? 76 : spacious ? 132 : 108));
+        paint.setFakeBoldText(true);
+        paint.setTextSize(sp(labelSize));
+        float textHeight = paint.descent() - paint.ascent();
+        if (textHeight > rowHeight - dp(4)) {
+            labelSize = Math.max(16, labelSize * Math.max(dp(16), rowHeight - dp(4)) / textHeight);
+            paint.setTextSize(sp(labelSize));
+            textHeight = paint.descent() - paint.ascent();
+        }
+        float labelHeight = Math.max(textHeight, Math.min(textHeight + dp(12), rowHeight - dp(1)));
+        float labelOffset = dp(23 * carScale + 16);
         for (int i = 0; i < markers.size(); i++) {
             Marker marker = markers.get(i);
             marker.x = left + marker.position * (right - left);
-            float width = paint.measureText(marker.label) + dp(16);
-            float labelLeft = marker.x + dp(26);
-            if (labelLeft + width > getWidth()) labelLeft = marker.x - dp(26) - width;
+            marker.y = laneTop + rowHeight * (i + 0.5f);
+            float width = paint.measureText(marker.label) + dp(20);
+            float labelLeft = marker.x + labelOffset;
+            if (labelLeft + width > getWidth()) labelLeft = marker.x - labelOffset - width;
             labelLeft = Math.max(0, labelLeft);
-            float start = Math.min(marker.x - dp(20), labelLeft);
-            float end = Math.max(marker.x + dp(20), labelLeft + width);
-            int lane = 0;
-            for (; lane < 2; lane++) {
-                boolean collision = false;
-                for (int j = 0; j < i; j++) {
-                    Marker previous = markers.get(j);
-                    if (previous.lane == lane && start < previous.bounds.right + dp(8)
-                            && end > previous.bounds.left - dp(8)) collision = true;
-                }
-                if (!collision) break;
-            }
-            marker.lane = lane;
-            float top = dp(27 + lane * 24);
-            marker.y = top + dp(11);
-            marker.labelBounds.set(labelLeft, top, labelLeft + width, top + dp(22));
-            marker.bounds.set(start, top, end, top + dp(22));
+            marker.labelBounds.set(labelLeft, marker.y - labelHeight / 2,
+                    labelLeft + width, marker.y + labelHeight / 2);
         }
+        paint.setFakeBoldText(false);
     }
 
     private void text(Canvas canvas, String text, float x, float y, int color, float size, Paint.Align align) {
@@ -129,53 +136,64 @@ public final class RemainingDistanceTrack extends View {
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         int ink = color(R.color.convoy_ink), muted = color(R.color.convoy_muted), line = color(R.color.convoy_line);
-        text(canvas, heading, 0, dp(18), ink, compact ? 16 : 18, Paint.Align.LEFT);
+        paint.setFakeBoldText(true);
+        text(canvas, heading, 0, dp(headingSize + 2), ink, headingSize, Paint.Align.LEFT);
+        paint.setFakeBoldText(false);
         if (markers.isEmpty()) {
-            text(canvas, "거리 정보를 기다리는 중", getWidth() / 2f, getHeight() / 2f + dp(18), muted, 18, Paint.Align.CENTER);
+            text(canvas, "거리 정보를 기다리는 중", getWidth() / 2f, getHeight() / 2f + dp(18), muted, labelSize, Paint.Align.CENTER);
             return;
         }
 
-        text(canvas, "공동 목적지", getWidth(), dp(18), muted, 14, Paint.Align.RIGHT);
-        float flagX = getWidth() - paint.measureText("공동 목적지") - dp(25);
-        canvas.save(); canvas.translate(flagX, dp(2)); canvas.scale(dp(0.85f), dp(0.85f));
+        text(canvas, "공동 목적지", getWidth(), dp(headingSize + 2), ink, axisSize, Paint.Align.RIGHT);
+        float flagScale = 1.1f * detailScale;
+        float flagX = getWidth() - paint.measureText("공동 목적지") - dp(15 * flagScale + 12);
+        canvas.save(); canvas.translate(flagX, dp(headingSize + 4 - 20 * flagScale));
+        canvas.scale(dp(flagScale), dp(flagScale));
         paint.setColor(ink); canvas.drawPath(destinationFlag, paint);
         paint.setStrokeWidth(2); canvas.drawLine(0, 0, 0, 20, paint); canvas.restore();
 
         paint.setColor(line);
-        canvas.drawRoundRect(left, baseline - dp(2), right, baseline + dp(2), dp(2), dp(2), paint);
-        paint.setColor(muted); paint.setStrokeWidth(dp(2));
-        canvas.drawLine(right, baseline - dp(4), right, baseline + dp(4), paint);
-        text(canvas, maxDistanceLabel, 0, baseline + dp(20), muted, 14, Paint.Align.LEFT);
-        text(canvas, "목적지 · 0km", getWidth(), baseline + dp(20), muted, 14, Paint.Align.RIGHT);
+        float axisHalfWidth = dp(2.5f * detailScale);
+        canvas.drawRoundRect(left, baseline - axisHalfWidth, right, baseline + axisHalfWidth, axisHalfWidth, axisHalfWidth, paint);
+        // The common destination is a prominent vertical rail shared by every vehicle row.
+        canvas.drawRoundRect(right - dp(8 * detailScale), laneTop, right + dp(8 * detailScale), baseline + dp(4), dp(8), dp(8), paint);
+        paint.setColor(ink);
+        canvas.drawRoundRect(right - axisHalfWidth, laneTop, right + axisHalfWidth, baseline + dp(4), axisHalfWidth, axisHalfWidth, paint);
+        text(canvas, maxDistanceLabel, 0, baseline + dp(axisSize + 8), muted, axisSize, Paint.Align.LEFT);
+        text(canvas, "목적지 · 0km", getWidth(), baseline + dp(axisSize + 8), ink, axisSize, Paint.Align.RIGHT);
 
         // Draw connectors first so another vehicle's connector never crosses over a car or label.
-        paint.setColor(line); paint.setStrokeWidth(dp(1));
         for (int i = 0; i < markers.size(); i++) {
             Marker marker = markers.get(i);
-            canvas.drawLine(marker.x, marker.y + dp(10), marker.x, baseline, paint);
-            canvas.drawLine(marker.x - dp(3), baseline, marker.x + dp(3), baseline, paint);
+            paint.setColor(marker.own ? muted : line); paint.setStrokeWidth(dp(1.5f * detailScale));
+            canvas.drawLine(marker.x, marker.y + dp(11 * carScale), marker.x, baseline, paint);
+            paint.setColor(ink); paint.setStrokeWidth(dp(2 * detailScale));
+            canvas.drawLine(marker.x, baseline - dp(4), marker.x, baseline + dp(4), paint);
         }
         for (int i = 0; i < markers.size(); i++) {
             Marker marker = markers.get(i);
             drawCar(canvas, marker, ink);
             int fill = color(marker.own ? R.color.convoy_own : R.color.convoy_surface);
             paint.setStyle(Paint.Style.FILL); paint.setColor(fill);
-            canvas.drawRoundRect(marker.labelBounds, dp(11), dp(11), paint);
-            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(1));
+            float radius = Math.min(dp(20), marker.labelBounds.height() / 2);
+            canvas.drawRoundRect(marker.labelBounds, radius, radius, paint);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(detailScale));
             paint.setColor(marker.own ? fill : line);
-            canvas.drawRoundRect(marker.labelBounds, dp(11), dp(11), paint);
-            paint.setTextSize(sp(compact ? 14 : 16));
+            canvas.drawRoundRect(marker.labelBounds, radius, radius, paint);
+            paint.setTextSize(sp(labelSize));
+            paint.setFakeBoldText(true);
             float textY = marker.labelBounds.centerY() - (paint.ascent() + paint.descent()) / 2;
             text(canvas, marker.label, marker.labelBounds.centerX(), textY,
-                    marker.own ? color(R.color.convoy_own_ink) : ink, compact ? 14 : 16, Paint.Align.CENTER);
+                    marker.own ? color(R.color.convoy_own_ink) : ink, labelSize, Paint.Align.CENTER);
+            paint.setFakeBoldText(false);
         }
-        if (!excludedLabel.isEmpty()) text(canvas, excludedLabel, 0, getHeight() - dp(3), muted, 14, Paint.Align.LEFT);
+        if (!excludedLabel.isEmpty()) text(canvas, excludedLabel, 0, getHeight() - dp(6), muted, axisSize, Paint.Align.LEFT);
     }
 
     private void drawCar(Canvas canvas, Marker marker, int ink) {
         int fill = color(marker.own ? R.color.convoy_own : R.color.convoy_surface);
         int window = color(marker.own ? R.color.convoy_own_ink : R.color.convoy_muted);
-        canvas.save(); canvas.translate(marker.x, marker.y); canvas.scale(dp(0.8f), dp(0.8f));
+        canvas.save(); canvas.translate(marker.x, marker.y); canvas.scale(dp(carScale), dp(carScale));
         paint.setStyle(Paint.Style.FILL); paint.setColor(fill); canvas.drawPath(carBody, paint);
         paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.8f); paint.setColor(ink);
         canvas.drawPath(carBody, paint);
