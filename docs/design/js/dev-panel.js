@@ -8,6 +8,8 @@
   const mock = window.CoDriveMock;
   if (!mock) throw new Error('dev-panel.js 보다 mock-scenario.js 를 먼저 불러와야 합니다.');
   const OPEN_KEY = 'codrive.fun.dev-panel.open.v1';
+  // 새로고침하는 버튼(여행 횟수·초기화)을 누른 뒤, 다시 불러온 화면에서 포커스를 펼치기 버튼에 둔다.
+  const FOCUS_KEY = 'codrive.fun.dev-panel.focus-toggle.v1';
   const NEAR_TWO_HOURS = 2 * 3600 - 60; // 연속 주행 1시간 59분
 
   const style = document.createElement('style');
@@ -28,7 +30,7 @@
     .dev-body button:not(.dev-toggle):hover { background: #e9e4da; }
     .dev-body button[aria-pressed="true"] { color: #fffdf8; background: #24221e; border-color: #24221e; }
     .dev-actions { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid #d7d1c7; }
-    .dev-status { margin: 0; color: #706c64; line-height: 1.4; }
+    .dev-status { max-width: 288px; margin: 0; padding: 0 16px 12px; color: #706c64; line-height: 1.4; }
     .dev-status:empty { display: none; }
     @media (prefers-reduced-motion: reduce) { .dev-toggle svg { transition: none; } }
   `;
@@ -52,8 +54,8 @@
         <button type="button" data-dev-action="end-trip">여행 종료 처리</button>
         <button type="button" data-dev-action="reset">시연 초기화</button>
       </div>
-      <p class="dev-status" id="dev-status" role="status"></p>
-    </div>`;
+    </div>
+    <p class="dev-status" id="dev-status" role="status"></p>`;
   const toggle = panel.querySelector('.dev-toggle');
   const body = panel.querySelector('.dev-body');
   const scenarioGroup = panel.querySelector('.dev-scenarios');
@@ -65,7 +67,16 @@
     body.hidden = !open;
     try { window.sessionStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* 저장 없이도 패널은 동작한다. */ }
   }
-  toggle.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  toggle.addEventListener('click', () => {
+    status.textContent = '';
+    setOpen(!panel.classList.contains('open'));
+  });
+  // 시나리오·여행 종료처럼 화면을 바꾸는 버튼을 누르면 패널을 접어 결과를 가리지 않게 한다.
+  // 결과 문구(dev-status)는 접힌 상태에서도 펼치기 버튼 아래에 보인다.
+  function collapse() {
+    setOpen(false);
+    toggle.focus();
+  }
 
   // 새로고침해도 고른 시나리오가 유지되도록 주소의 scenario 값도 함께 바꾼다.
   function keepInUrl(name) {
@@ -84,6 +95,7 @@
       keepInUrl(name);
       status.textContent = '';
       render();
+      collapse();
     });
     scenarioGroup.append(button);
   }
@@ -96,14 +108,17 @@
     const tripLog = window.CoDriveTripLog;
     status.textContent = !tripLog ? '이 화면에는 여행 기록이 없어요.'
       : tripLog.endTrip() ? '여행을 종료했어요.' : '이미 종료한 여행이에요.';
+    collapse();
   });
-  // 시연 기록(시나리오·여행 기록·화면 상태)을 지우고 다시 불러온다. 패널 열림 상태와 주소의 값은 유지한다.
+  // 시연 기록(시나리오·여행 기록·화면 상태)을 지우고 다시 불러온다. 주소의 값은 유지하고, 패널은 접힌 채로 다시 연다.
   function restart(url = window.location.href) {
     try {
       for (const key of Object.keys(window.sessionStorage)) {
-        if (key.startsWith('codrive.fun.') && key !== OPEN_KEY || key.startsWith('codrive.history.')) window.sessionStorage.removeItem(key);
+        if (key.startsWith('codrive.fun.') || key.startsWith('codrive.history.')) window.sessionStorage.removeItem(key);
       }
+      window.sessionStorage.setItem(FOCUS_KEY, '1');
     } catch { /* 저장소를 쓸 수 없으면 새로고침만 한다. */ }
+    setOpen(false);
     window.location.replace(url);
   }
   panel.querySelector('[data-dev-action="reset"]').addEventListener('click', () => restart());
@@ -131,4 +146,10 @@
   try { open = window.sessionStorage.getItem(OPEN_KEY) === '1'; } catch { /* 기본은 접힌 상태 */ }
   setOpen(open);
   render();
+  try {
+    if (window.sessionStorage.getItem(FOCUS_KEY) === '1') {
+      window.sessionStorage.removeItem(FOCUS_KEY);
+      toggle.focus();
+    }
+  } catch { /* 포커스 이동 없이도 패널은 동작한다. */ }
 })();

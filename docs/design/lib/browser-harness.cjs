@@ -106,6 +106,15 @@ async function open(browser, pageUrl, { scenario, search = '', width = 1682, hei
       await next;
       await page.waitFor('document.documentElement.dataset.ready === "true"');
     },
+    // 키보드 입력: 'Tab' · 'Shift+Tab' · 'Enter' · 'Space' · 'Escape'
+    async press(name) {
+      const keys = { Tab: ['Tab', 'Tab', 9, ''], Enter: ['Enter', 'Enter', 13, '\r'], Space: [' ', 'Space', 32, ' '], Escape: ['Escape', 'Escape', 27, ''] };
+      const shift = name.startsWith('Shift+');
+      const [key, code, keyCode, text] = keys[shift ? name.slice(6) : name];
+      const base = { key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode, modifiers: shift ? 8 : 0 };
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', ...base, ...(text ? { text } : {}) });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
+    },
     // 화면 안의 동작(새로고침 등)으로 다음 페이지가 다 불러와질 때까지 기다릴 약속을 미리 만든다.
     nextLoad: () => browser.once('Page.loadEventFired', sessionId),
     close: () => browser.send('Target.closeTarget', { targetId })
@@ -129,7 +138,10 @@ function layoutProbe({ boxes = '', noWrap = '' } = {}) {
   for (const node of items) {
     const box = node.getBoundingClientRect();
     if (box.right > root.clientWidth + 0.5 || box.left < -0.5) problems.push('outside viewport: ' + name(node));
-    if (node.matches('button, p, span, li') && node.scrollWidth > node.clientWidth + 1 && getComputedStyle(node).overflowX !== 'visible') problems.push('clipped: ' + name(node));
+    const style = getComputedStyle(node);
+    if (node.matches('button, p, span, li') && node.scrollWidth > node.clientWidth + 1 && style.overflowX !== 'visible') problems.push('clipped: ' + name(node));
+    // 상자 밖으로 글자가 넘쳐 보이는 경우(넘침 허용 상태라 잘리지 않고 다른 요소 위로 번짐)
+    if (style.display !== 'inline' && style.overflowX === 'visible' && node.clientWidth > 0 && node.scrollWidth > node.clientWidth + 1) problems.push('text spills out: ' + name(node));
     const parent = node.closest('.main, .route-sidebar, .sidebar');
     if (parent) {
       const area = parent.getBoundingClientRect();

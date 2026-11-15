@@ -170,6 +170,8 @@ const noRanking = async (page, label) => {
         await next;
         await page.waitFor('document.documentElement.dataset.ready === "true"');
         await ready(page);
+        assert.deepEqual(await page.eval(`[document.getElementById('dev-body').hidden, document.activeElement.className]`), [true, 'dev-toggle'],
+          '여행 횟수를 바꾸면 다시 불러온 화면에서 패널이 접히고 포커스가 펼치기 버튼에 있다');
       };
       await pressTrip(2);
       assert.match(await page.eval('location.search'), /trip=2/);

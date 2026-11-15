@@ -147,7 +147,11 @@ const click = (page, selector) => page.eval(`document.querySelector(${JSON.strin
       await dev.waitFor(`document.getElementById('main').dataset.locked === 'true'`);
       assert.equal(await dev.eval(`window.CoDriveMock.scenario()`), 'driving');
       assert.match(await dev.eval('location.search'), /scenario=driving/);
+      assert.deepEqual(await dev.eval(`[document.getElementById('dev-body').hidden, document.activeElement.className]`), [true, 'dev-toggle'],
+        '시나리오를 고르면 패널이 접히고 포커스가 펼치기 버튼으로 간다');
+      await click(dev, '.dev-toggle');
       await click(dev, '[data-dev-action="near-two-hours"]');
+      assert.equal(await dev.eval(`document.getElementById('dev-body').hidden`), false, '1시간 59분 버튼은 패널을 접지 않는다');
       const driving = await dev.eval(`window.CoDriveVehicle.getContinuousDrivingSeconds().then(m => m.value)`);
       assert.ok(driving >= 7140 && driving < 7150, String(driving));
       await dev.close();

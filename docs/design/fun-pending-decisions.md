@@ -124,12 +124,23 @@ node docs/design/verify-trip-card.cjs          # Chrome 또는 Edge 필요
 
 ### 14. 투표 집계 `votes { agree, total }`와 가결 기준
 - **현재 임시 결정:** 투표(VOTE) 결정은 찬성 수를 함께 기록합니다(`tripLog.recordDecision({ kind: 'VOTE', votes })`).
-  - 여행 카드에서는 **찬성이 과반이면 가결**로 표시합니다.
+  - 여행 카드에서는 **찬성이 과반이면 가결**로 표시합니다. 본인 확인을 마쳤고, 팀 연결 전까지 이 기준을 유지합니다.
   - 집계가 없는 투표는 "집계 없음"으로 표시하고, 만장일치 판정에서는 "확인할 수 없어요"입니다.
+- **연결 관계:** 가결 여부는 그룹 담당이 만드는 **"여행 규칙" 설정값(과반 투표 / 방장 결정)**을 따라가야 합니다.
+  - 과반 투표 그룹: 찬성 과반이면 가결. 지금의 임시 기준과 같습니다.
+  - 방장 결정 그룹: 찬성 수와 관계없이 방장의 결정이 결과입니다. 찬성 수만으로는 가결을 알 수 없습니다.
+  - 그룹 전체 경로 변경: README 규칙대로 전원 수락이 필요하고, 한 명이라도 거절하면 부결입니다.
+- **연결할 때 할 일:**
+  1. 그룹 쪽에서 투표 결과를 기록할 때 `votes`에 **적용한 규칙과 결과**를 함께 넘깁니다. 예: `votes: { agree, total, rule: 'MAJORITY' | 'LEADER' | 'ALL', passed }`
+  2. 여행 카드는 `passed`가 있으면 그 값을 그대로 쓰고, 없을 때만 과반 기준으로 계산합니다.
+  3. 만장일치 도전과제는 규칙과 관계없이 `agree === total`로 판정하므로 바꾸지 않습니다.
 - **팀 확인 필요:**
-  - 실제 투표 결과를 누가 기록할지(그룹 공동 의사결정 담당)
-  - 리더 결정이나 전원 수락 방식의 투표에서 가결을 어떻게 표시할지. README의 결정 방식이 여러 가지라 과반 기준이 맞지 않을 수 있습니다.
-- **바꿀 때 수정할 위치:** `js/trip-log.js`의 `recordDecision()`, `trip-card.html`의 `passed()`
+  - 그룹 담당의 여행 규칙 설정값 이름과 저장 위치
+  - 투표 결과를 trip-log(history)에 누가 기록할지
+- **바꿀 때 수정할 위치:**
+  - `js/trip-log.js`의 `recordDecision()`: `votes` 검증에 `rule`·`passed` 추가
+  - `trip-card.html`의 `passed()`: `decision.votes.passed`를 먼저 사용
+  - 그룹 쪽은 `group/domain/usecase`(여행 규칙·공동 의사결정 규칙)에서 결과를 만들어 넘깁니다.
 
 ### 15. 같은 그룹과의 여행 횟수 `getTripNumberWithGroup()`
 - **현재 임시 결정:** `trip-log.js`가 시연 값 **3**을 돌려줍니다. 시연 때는 주소의 `?trip=1~10`이나 시연 패널 버튼으로 바꿉니다.
@@ -159,6 +170,8 @@ node docs/design/verify-trip-card.cjs          # Chrome 또는 Edge 필요
   - 시연 초기화
 
   `dev=1`이 없으면 아무것도 하지 않습니다(검사로 확인).
+
+  시나리오·여행 횟수·여행 종료·초기화 버튼을 누르면 패널이 저절로 접히고 포커스는 **시연 조작**(펼치기) 버튼으로 갑니다. 여행 횟수·초기화는 화면을 다시 불러온 뒤에 접힌 상태와 포커스를 맞춥니다. "연속 주행 1시간 59분으로"는 결과 문구를 보며 이어서 누를 수 있도록 접지 않습니다. 결과 문구("여행을 종료했어요." 등)는 접힌 상태에서도 펼치기 버튼 아래에 보입니다.
 - **팀 확인 필요:** 앱 배포 화면에서 이 파일을 뺄지(포팅 담당)
 - **바꿀 때 수정할 위치:** `js/dev-panel.js`, 각 HTML의 `<script src="js/dev-panel.js">`
 
@@ -175,3 +188,17 @@ node docs/design/verify-trip-card.cjs          # Chrome 또는 Edge 필요
 - **현재 임시 결정:** 화면 검사 스크립트는 헤드리스 Chrome이나 Edge가 있어야 실행됩니다. 추가 패키지는 없습니다. 브라우저 경로는 `CHROME_PATH`로 바꿀 수 있습니다.
 - **팀 확인 필요:** CI에서 실행할지, 실행한다면 브라우저를 설치할지
 - **바꿀 때 수정할 위치:** `lib/browser-harness.cjs`의 `findBrowser()`
+
+## 7단계 검수에서 추가
+
+### 21. 공통 골격 CSS·동작을 나누는 방식
+- **현재 임시 결정:**
+  - **CSS:** 기준 HTML(`route-recommendation.html`)의 shell·사이드 메뉴·현재 경로 패널 CSS를 각 화면에 복사해 둡니다. 화면마다 쓰는 규칙만 남겼고 값은 바꾸지 않았습니다. 기준 HTML이 한 파일 안에 스타일을 담는 방식이라 그대로 따랐습니다.
+  - **동작:** 세 화면에 똑같이 있던 현재 경로 패널 코드와 시간 문구 함수는 `js/fun-shell.js`(`mountRoutePanel()`, `duration()`) 하나로 모았습니다.
+- **팀 확인 필요:** 팀 공통 CSS 파일(`shell.css` 등)을 만들지. 만들면 8단계 포팅의 스크립트 로딩 방식(19번)과 같은 문제가 CSS에도 생깁니다.
+- **바꿀 때 수정할 위치:** 각 HTML `<style>`의 "route-recommendation.html 에서 복사한 공통 골격" 구역과 "반응형 규칙" 구역, `js/fun-shell.js`
+
+### 22. 긴 제목의 줄바꿈
+- **현재 임시 결정:** 그룹 이름(`.context-title`)과 여행 이름은 `word-break: keep-all`로 낱말 단위로 줄을 바꿉니다. 기준 HTML은 글자 단위로 끊겨서 "이 / 름"처럼 보이므로, 내 화면에서만 이렇게 바꿨습니다. 룰렛의 긴 차량 이름도 바퀴 안에서 낱말 단위로 두 줄까지 줄바꿈합니다.
+- **팀 확인 필요:** 기준 HTML과 design-guide에도 같은 규칙을 넣을지(디자인 가이드 담당)
+- **바꿀 때 수정할 위치:** `fun-stop-games.html`·`fun-challenges.html`의 `.context-title`, `trip-card.html`의 `.trip-head h1`, `fun-stop-games.html`의 `.wheel-label`
