@@ -19,7 +19,7 @@
 | 에뮬레이터 | Pleos Connect v2.1.0 |
 | 화면 규격 | 2560 × 1440px · 160dpi |
 | 앱 화면 검증 크기 | 전체 창 1682 × 1210dp · 분할 창 829 × 1210dp |
-| APK 다운로드 | [GitHub Releases](https://github.com/HYUNDAI-APP-PROJ/CoDrive/releases) |
+| APK 다운로드 | [APK_경로](https://github.com/HYUNDAI-APP-PROJ/CoDrive/blob/main/apk/%EB%8B%88%EC%B0%A8%EB%82%B4%EC%B0%A8_CoDrive_release.apk) |
 
 여러 차량이 함께 여행할 때 그룹 관리, 대열 확인, 음성 대화, 공동 의사결정, AI 추천과 여행 기록을 제공하는 앱을 목표로 합니다.
 
