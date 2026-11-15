@@ -105,10 +105,10 @@ public final class DrivingStatusUiState {
         switch(v.motion.value) { case MOVING:return "주행 중"; case STOPPED:return "정차 중"; default:return "상태 확인 중"; }
     }
     public String cardNotice(VehicleStatus v) {
-        for(Notice n:notices) if(n.vehicleId.equals(v.vehicleId) && n.priority<=2) return "⚠ "+n.text.substring(v.displayName.length()+3);
+        for(Notice n:notices) if(n.vehicleId.equals(v.vehicleId) && n.priority<=2) return n.text.substring(v.displayName.length()+3);
         String request=DrivingText.requestState(v.request);
         if(!request.isEmpty()) return request;
-        for(Notice n:notices) if(n.vehicleId.equals(v.vehicleId)) return "⚠ "+n.text.substring(v.displayName.length()+3);
+        for(Notice n:notices) if(n.vehicleId.equals(v.vehicleId)) return n.text.substring(v.displayName.length()+3);
         return v.alertsQuality==Measurement.Quality.AVAILABLE ? "" : "경고 정보 "+DrivingText.quality(Measurement.missing(v.alertsQuality),now);
     }
 }

@@ -1,13 +1,15 @@
 <resources>
-    <color name="convoy_background">#F7F7F7</color>
-    <color name="convoy_surface">#FFFFFF</color>
-    <color name="convoy_ink">#161616</color>
-    <color name="convoy_muted">#656565</color>
-    <color name="convoy_line">#DEDEDE</color>
-    <color name="convoy_own">#161616</color>
-    <color name="convoy_own_ink">#FFFFFF</color>
-    <color name="convoy_own_muted">#C8C8C8</color>
-    <color name="convoy_own_line">#444444</color>
-    <color name="convoy_warning">#8A4A08</color>
-    <color name="convoy_warning_surface">#FFF3E4</color>
+    <color name="convoy_background">#F3F0E9</color>
+    <color name="convoy_surface">#FFFDF8</color>
+    <color name="convoy_ink">#24221E</color>
+    <color name="convoy_muted">#706C64</color>
+    <color name="convoy_line">#D7D1C7</color>
+    <color name="convoy_own">@color/convoy_ink</color>
+    <color name="convoy_own_ink">@color/convoy_surface</color>
+    <color name="convoy_hover">#E9E4DA</color>
+    <color name="convoy_accent_hover">#403D37</color>
+    <color name="convoy_disabled">#E6E0D7</color>
+    <color name="convoy_nav_background">#151515</color>
+    <color name="convoy_nav_muted">#AAA7A0</color>
+    <color name="convoy_nav_line">#393938</color>
 </resources>

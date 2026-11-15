@@ -3,6 +3,8 @@ package com.codrive.convoy.ui;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,10 +37,12 @@ public final class VehicleStatusCard {
     }
     public void bind(DrivingStatusUiState state,VehicleStatus vehicle,boolean shortWindow,Runnable onDetails) {
         boolean own=vehicle.vehicleId.equals(state.trip.currentVehicleId);
-        int ink=color(own?R.color.convoy_own_ink:R.color.convoy_ink);
-        int muted=color(own?R.color.convoy_own_muted:R.color.convoy_muted);
-        int line=color(own?R.color.convoy_own_line:R.color.convoy_line);
-        view.setBackground(shape(context,color(own?R.color.convoy_own:R.color.convoy_surface),line,20));
+        int ink=color(R.color.convoy_ink);
+        int muted=color(R.color.convoy_muted);
+        int line=color(R.color.convoy_line);
+        GradientDrawable background=shape(context,color(R.color.convoy_surface),own?ink:line,8);
+        if(own) background.setStroke(dp(2),ink);
+        view.setBackground(new RippleDrawable(ColorStateList.valueOf(color(R.color.convoy_hover)),background,null));
         show(R.id.convoy_card_name,vehicle.displayOrder+"  "+vehicle.displayName,ink);
         String freshness=state.freshness(vehicle);
         String motion=state.motion(vehicle);
@@ -49,6 +53,11 @@ public final class VehicleStatusCard {
                     vehicle.distance.quality==Measurement.Quality.STALE?vehicle.distance.observedAt:vehicle.remainingSeconds.observedAt);
         }
         show(R.id.convoy_card_motion,motion,muted);
+        if(compact) {
+            text(R.id.convoy_card_motion).setTextSize(shortWindow?14:16);
+            text(R.id.convoy_card_motion).setMaxLines(1);
+            text(R.id.convoy_card_motion).setEllipsize(TextUtils.TruncateAt.END);
+        }
         String eta=state.eta(vehicle);
         show(R.id.convoy_card_eta,eta,ink);
         TextView etaView=text(R.id.convoy_card_eta);
@@ -76,7 +85,7 @@ public final class VehicleStatusCard {
         String notice=state.cardNotice(vehicle);
         if(compact) {
             notice=notice.replace(" · 마지막 수신 경고","").replace(" · 시연","");
-            if(notice.contains("잔량")) notice="⚠ 잔량 낮음";
+            if(notice.contains("잔량")) notice="잔량 낮음";
         }
         show(R.id.convoy_card_notice,notice,ink);
         VoiceSession voice=own?state.voice:vehicle.voice;

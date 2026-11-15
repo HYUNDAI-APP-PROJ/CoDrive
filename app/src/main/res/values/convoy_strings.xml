@@ -15,4 +15,11 @@
     <string name="convoy_recover">연결·정보 복구</string>
     <string name="convoy_advance">11초 경과</string>
     <string name="convoy_detail">차량 상세 정보</string>
+    <string name="convoy_nav_group">우리 그룹</string>
+    <string name="convoy_nav_drive">실시간 주행</string>
+    <string name="convoy_nav_recommendation">AI 경로 추천</string>
+    <string name="convoy_nav_voice">음성 채널</string>
+    <string name="convoy_nav_history">여행 기록</string>
+    <string name="convoy_nav_current">실시간 주행, 현재 화면</string>
+    <string name="convoy_nav_unavailable">%1$s, 현재 화면에서는 사용할 수 없음</string>
 </resources>

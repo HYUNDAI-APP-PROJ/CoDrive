@@ -1,6 +1,5 @@
 package com.codrive.app;
 
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -30,14 +29,13 @@ public final class DrivingStatusActivity extends AppCompatActivity {
         WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
         setContentView(R.layout.activity_driving_status);
         View root=findViewById(R.id.convoy_root);
-        int padding=Math.round(16*getResources().getDisplayMetrics().density);
         ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)->{
             Insets bars=insets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
-            view.setPadding(padding+bars.left,padding+bars.top,padding+bars.right,padding+bars.bottom); return insets;
+            view.setPadding(bars.left,bars.top,bars.right,bars.bottom); return insets;
         });
-        boolean light=(getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)!=Configuration.UI_MODE_NIGHT_YES;
-        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightStatusBars(light);
-        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightNavigationBars(light);
+        // The supplied guide defines one Black & Cream palette, including in night configuration.
+        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightStatusBars(true);
+        WindowCompat.getInsetsController(getWindow(),root).setAppearanceLightNavigationBars(true);
         DrivingStatusViewModel.SavedSession saved=savedInstanceState==null?null:
                 BundleCompat.getSerializable(savedInstanceState,SAVED_SESSION,DrivingStatusViewModel.SavedSession.class);
         Handler handler=new Handler(Looper.getMainLooper());
