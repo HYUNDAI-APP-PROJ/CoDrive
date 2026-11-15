@@ -24,11 +24,14 @@ public final class DrivingStatusScreen {
     private final List<VehicleStatusCard> cards=new ArrayList<>();
     private DrivingStatusUiState state;
     private boolean compact, shortWindow;
-    private int lastWidth=-1,lastHeight=-1;
+    private int lastWidth=-1,lastHeight=-1,lastVehicleCount=-1;
+    private boolean lastHasNotice;
     private AlertDialog dialog;
     public DrivingStatusScreen(View root,DrivingStatusViewModel model) {
         this.root=root; this.context=root.getContext(); this.model=model;
-        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->resize(r-l,b-t));
+        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
+            if(resize(r-l,b-t)) render();
+        });
         root.findViewById(R.id.convoy_rest).setOnClickListener(v->model.request(VehicleRequest.Type.REST));
         root.findViewById(R.id.convoy_energy).setOnClickListener(v->{if(state!=null) model.request(state.energyRequest());});
         root.findViewById(R.id.convoy_voice).setOnClickListener(v->model.voiceAction());
@@ -46,19 +49,36 @@ public final class DrivingStatusScreen {
     }
     private int dp(float n) { return Math.round(n*context.getResources().getDisplayMetrics().density); }
     private void height(int id,int value) { View v=root.findViewById(id); v.getLayoutParams().height=dp(value); v.requestLayout(); }
-    private void resize(int width,int height) {
+    private boolean resize(int width,int height) {
         int availableWidth=width-root.getPaddingLeft()-root.getPaddingRight();
         int availableHeight=height-root.getPaddingTop()-root.getPaddingBottom();
-        if(availableWidth==lastWidth && availableHeight==lastHeight) return;
+        if(availableWidth<=0 || availableHeight<=0) return false;
+        int vehicleCount=state==null?3:state.trip.vehicles.size();
+        boolean hasNotice=state!=null && !noticeText().isEmpty();
+        if(availableWidth==lastWidth && availableHeight==lastHeight
+                && vehicleCount==lastVehicleCount && hasNotice==lastHasNotice) return false;
         lastWidth=availableWidth; lastHeight=availableHeight;
+        lastVehicleCount=vehicleCount; lastHasNotice=hasNotice;
         float density=context.getResources().getDisplayMetrics().density;
         compact=availableWidth/density<1000;
-        shortWindow=availableHeight/density<680;
-        height(R.id.convoy_topbar,compact?32:40); height(R.id.convoy_header,compact?66:76);
-        height(R.id.convoy_track,compact?122:144); height(R.id.convoy_alert,compact?36:40);
-        ((TextView)root.findViewById(R.id.convoy_destination)).setTextSize(compact?24:28);
-        ((TextView)root.findViewById(R.id.convoy_arrival_summary)).setTextSize(compact?20:24);
-        rebuildCards(); if(state!=null) bind(state);
+        int topbar=compact?30:36, alert=compact?32:36;
+        int usableHeight=Math.round(availableHeight/density);
+        boolean spacious=availableWidth/density>=1400 && usableHeight>=850;
+        int contentHeight=usableHeight-topbar-64-(hasNotice?alert:0)-20;
+        int minimumCards=compact?vehicleCount*68+Math.max(0,vehicleCount-1)*6:240;
+        // Aim for half the app window, reserving readable cards and the 64dp actions.
+        int panelHeight=Math.max(0,Math.min(Math.round(usableHeight*0.52f),contentHeight-minimumCards));
+        shortWindow=compact || contentHeight-panelHeight<360;
+        height(R.id.convoy_topbar,topbar); height(R.id.convoy_header,compact?56:spacious?112:84);
+        height(R.id.convoy_destination_panel,panelHeight); height(R.id.convoy_alert,alert);
+        View panel=root.findViewById(R.id.convoy_destination_panel);
+        int inset=dp(compact?12:spacious?24:16); panel.setPadding(inset,inset,inset,inset);
+        ((TextView)root.findViewById(R.id.convoy_destination)).setTextSize(compact?28:spacious?52:44);
+        ((TextView)root.findViewById(R.id.convoy_arrival_summary)).setTextSize(compact?22:spacious?40:34);
+        ((TextView)root.findViewById(R.id.convoy_destination_summary)).setTextSize(compact?14:spacious?24:20);
+        ((TextView)root.findViewById(R.id.convoy_comparison_scope)).setTextSize(compact?14:spacious?22:18);
+        rebuildCards();
+        return true;
     }
     private void rebuildCards() {
         LinearLayout container=root.findViewById(R.id.convoy_cards); container.removeAllViews(); cards.clear();
@@ -67,13 +87,23 @@ public final class DrivingStatusScreen {
         for(int i=0;i<state.trip.vehicles.size();i++) {
             VehicleStatusCard card=new VehicleStatusCard(context,container,compact);
             LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(compact?-1:0,compact?0:-1,1);
-            if(i>0) { if(compact) params.topMargin=dp(8); else params.setMarginStart(dp(16)); }
+            if(i>0) { if(compact) params.topMargin=dp(6); else params.setMarginStart(dp(12)); }
             container.addView(card.view,params); cards.add(card);
         }
     }
     private void text(int id,String value) { ((TextView)root.findViewById(id)).setText(value); }
     public void bind(DrivingStatusUiState state) {
         this.state=state;
+        resize(root.getWidth(),root.getHeight());
+        render();
+    }
+    private String noticeText() {
+        if(!state.trip.actionsAllowed) return "현재 화면 조작이 제한되어 있어요";
+        return state.notices.isEmpty()?state.comparison.allArrived?"도착을 확인했어요. 여행은 계속 유지됩니다.":"":
+                "⚠  "+state.notices.get(0).text+(state.notices.size()>1?"  · 추가 "+(state.notices.size()-1)+"건":"");
+    }
+    private void render() {
+        if(state==null) return;
         if(cards.size()!=state.trip.vehicles.size()) rebuildCards();
         text(R.id.convoy_destination,state.trip.destinationName);
         text(R.id.convoy_destination_summary,"함께하는 차량 "+state.trip.vehicles.size()+"대 · "+state.destinationSummary);
@@ -82,10 +112,9 @@ public final class DrivingStatusScreen {
         for(int i=0;i<cards.size();i++) {
             VehicleStatus v=state.trip.vehicles.get(i); cards.get(i).bind(state,v,shortWindow,()->showDetails(v));
         }
-        String notice=state.notices.isEmpty()?state.comparison.allArrived?"도착을 확인했어요. 여행은 계속 유지됩니다.":"":
-                "⚠  "+state.notices.get(0).text+(state.notices.size()>1?"  · 추가 "+(state.notices.size()-1)+"건":"");
-        if(!state.trip.actionsAllowed) notice="현재 화면 조작이 제한되어 있어요";
+        String notice=noticeText();
         text(R.id.convoy_alert,notice);
+        root.findViewById(R.id.convoy_alert).setVisibility(notice.isEmpty()?View.GONE:View.VISIBLE);
         root.findViewById(R.id.convoy_demo).setEnabled(state.trip.detailsAllowed);
         VehicleRequest request=state.trip.mine().request;
         requestButton(R.id.convoy_rest,VehicleRequest.Type.REST,request);
