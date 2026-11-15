@@ -6,10 +6,20 @@
 
 | 항목 | 내용 |
 | --- | --- |
+| 앱 이름 | CoDrive |
+| 한 줄 소개 | 여러 차량의 동행 여행을 위한 그룹 관리, 주행 상태 확인, AI 경로 추천과 여행 기록 앱 |
 | 조직 | HYUNDAI-APP-PROJ |
 | 플랫폼 | Pleos Connect / Android |
 | 개발 도구 | Android Studio |
 | 현재 상태 | HTML 디자인 앱 이식·Android 음성 입력 연결 |
+| 실행 방법 | GitHub Release에서 APK를 내려받아 Pleos 에뮬레이터에 설치하거나, Android Studio에서 Gradle 동기화 후 `app` 실행 |
+| 테스트 환경 | Android 14 · API 34 |
+| 빌드 환경 | JDK 25 · Android SDK 37 · Gradle 9.6.0 · AGP 9.5.1 |
+| 필요한 설정 | `local.properties`의 `sdk.dir`에 Android SDK 경로 설정. 음성 입력 사용 시 마이크 권한과 Android 음성 인식 서비스 필요 |
+| 에뮬레이터 | Pleos Connect v2.1.0 |
+| 화면 규격 | 2560 × 1440px · 160dpi |
+| 앱 화면 검증 크기 | 전체 창 1682 × 1210dp · 분할 창 829 × 1210dp |
+| APK 다운로드 | [GitHub Releases](https://github.com/HYUNDAI-APP-PROJ/CoDrive/releases) |
 
 여러 차량이 함께 여행할 때 그룹 관리, 대열 확인, 음성 대화, 공동 의사결정, AI 추천과 여행 기록을 제공하는 앱을 목표로 합니다.
 
