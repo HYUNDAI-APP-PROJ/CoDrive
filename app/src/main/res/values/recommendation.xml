@@ -1,0 +1,11 @@
+<resources>
+    <item name="recommendation_web" type="id" />
+    <style name="Theme.CoDrive.Recommendation" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">#F3F0E9</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="colorPrimary">#24221E</item>
+        <item name="colorOnPrimary">#FFFDF8</item>
+        <item name="android:statusBarColor">#F3F0E9</item>
+        <item name="android:navigationBarColor">#F3F0E9</item>
+    </style>
+</resources>
