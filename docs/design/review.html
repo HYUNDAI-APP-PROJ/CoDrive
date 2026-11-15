@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoDrive 디자인 검수</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f3f0e9; background: #222221; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+    h1 { margin: 0; font-size: 20px; font-weight: 600; }
+    header p { margin: 8px 0 0; color: #aaa7a0; font-size: 14px; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    button, a { min-height: 44px; display: inline-flex; align-items: center; padding: 10px 16px; border: 1px solid #55554f; border-radius: 5px; background: transparent; color: inherit; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
+    button:hover, a:hover { background: #33332f; }
+    button:focus-visible, a:focus-visible { outline: 2px solid #f3f0e9; outline-offset: 3px; }
+    .screens { display: flex; flex-wrap: wrap; align-items: start; gap: 24px; }
+    .screen { min-width: 0; flex: 2 1 640px; }
+    .screen.split { flex: 1 1 320px; }
+    h2 { margin: 0 0 12px; font-size: 14px; color: #aaa7a0; font-weight: 400; }
+    .viewport { position: relative; overflow: hidden; background: #111; outline: 1px solid #4a4a45; }
+    iframe { display: block; border: 0; transform-origin: top left; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>CoDrive 디자인 검수</h1><p>같은 HTML을 실제 앱 창 크기로 비교합니다. 화면 안의 버튼을 눌러 동작도 확인할 수 있습니다.</p></div>
+    <nav aria-label="검수 도구">
+      <button id="refresh" type="button">수정 내용 새로고침</button>
+      <button id="reset" type="button">대화·경로 초기화</button>
+      <a href="route-recommendation.html" target="_blank" rel="noopener">단독 보기</a>
+      <a href="route-recommendation.html?group=none" target="_blank" rel="noopener">그룹 생성 보기</a>
+    </nav>
+  </header>
+  <main class="screens">
+    <section class="screen"><h2>전체 창 · 1682 × 1210</h2><div class="viewport"><iframe title="전체 창 추천 화면" src="route-recommendation.html" width="1682" height="1210"></iframe></div></section>
+    <section class="screen split"><h2>분할 창 · 829 × 1210</h2><div class="viewport"><iframe title="분할 창 추천 화면" src="route-recommendation.html" width="829" height="1210"></iframe></div></section>
+  </main>
+  <script>
+    const frames = [...document.querySelectorAll('iframe')];
+    const resize = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const frame = entry.target.querySelector('iframe');
+        const scale = Math.min(1, entry.contentRect.width / Number(frame.width));
+        frame.style.transform = `scale(${scale})`;
+        entry.target.style.height = `${Number(frame.height) * scale}px`;
+      }
+    });
+    frames.forEach(frame => resize.observe(frame.parentElement));
+    document.getElementById('refresh').addEventListener('click', () => frames.forEach(frame => frame.contentWindow.location.reload()));
+    document.getElementById('reset').addEventListener('click', () => {
+      try {
+        window.sessionStorage.removeItem('codrive.recommendation.conversation.v1');
+        window.sessionStorage.removeItem('codrive.recommendation.route.v1');
+      }
+      catch { /* Browser storage is optional for the preview. */ }
+      frames.forEach(frame => frame.contentWindow.location.reload());
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<resources>
+    <item name="prompt" type="id"/><item name="send" type="id"/><item name="microphone" type="id"/>
+    <item name="mode_personal" type="id"/><item name="mode_group" type="id"/><item name="context_title" type="id"/>
+    <item name="auto_route" type="id"/><item name="conversation" type="id"/>
+    <item name="group_name" type="id"/><item name="create_group" type="id"/><item name="back_personal" type="id"/>
+</resources>
