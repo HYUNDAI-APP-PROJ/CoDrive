@@ -52,7 +52,7 @@ public final class VehicleStatusCard {
         String eta=state.eta(vehicle);
         show(R.id.convoy_card_eta,eta,ink);
         TextView etaView=text(R.id.convoy_card_eta);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(etaView,compact?20:26,compact?26:44,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(etaView,compact?20:26,compact?26:shortWindow?40:44,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         etaView.setMaxLines(1);
         show(R.id.convoy_card_arrival,state.arrivalDetail(vehicle),muted);
         show(R.id.convoy_card_relative,compact||shortWindow ? "" : state.relative(vehicle),muted);
@@ -82,8 +82,8 @@ public final class VehicleStatusCard {
         VoiceSession voice=own?state.voice:vehicle.voice;
         String voiceText=voice.state==VoiceSession.State.JOINED ? voice.muted?"음성 참여 · 마이크 꺼짐":"음성 참여 중"
                 : voice.state==VoiceSession.State.CONNECTING?"음성 연결 중":voice.state==VoiceSession.State.FAILED?"음성 연결 실패":"음성 미참여";
-        show(R.id.convoy_card_connection,compact?"":!freshness.isEmpty()?freshness:voiceText,muted);
-        if(!compact) view.setPadding(dp(shortWindow?14:20),dp(shortWindow?12:16),dp(shortWindow?14:20),dp(shortWindow?12:16));
+        show(R.id.convoy_card_connection,compact?"":!freshness.isEmpty()?freshness:shortWindow?"":voiceText,muted);
+        if(!compact) view.setPadding(dp(16),dp(shortWindow?12:16),dp(16),dp(shortWindow?12:16));
         view.setContentDescription(vehicle.displayName+". "+state.motion(vehicle)+". "+eta+". "+state.arrivalDetail(vehicle)
                 +". "+state.relative(vehicle)+". "+energyText+". "+secondary+". 이번 주행 "+driving+". "+notice+". "+freshness+". "+voiceText);
         view.setClickable(state.trip.detailsAllowed);

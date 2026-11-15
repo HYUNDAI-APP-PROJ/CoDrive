@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:paddingHorizontal="16dp" android:paddingVertical="6dp" android:gravity="center_vertical" android:baselineAligned="false">
+    android:paddingHorizontal="16dp" android:paddingVertical="4dp" android:gravity="center_vertical" android:baselineAligned="false">
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="26" android:orientation="vertical">
         <TextView android:id="@+id/convoy_card_name" style="@style/ConvoyText" android:textSize="20sp" android:textStyle="bold" />
         <TextView android:id="@+id/convoy_card_motion" style="@style/ConvoyText.Muted" android:layout_marginTop="4dp" />
