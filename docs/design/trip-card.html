@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CoDrive · 여행 기록 카드</title>
+  <style>
+    /* ---- route-recommendation.html 에서 복사한 공통 골격 (이 화면에 필요한 규칙만, 값 변경 없음) ---- */
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+      color: #24221e; background: #f3f0e9; color-scheme: light;
+      --accent: #24221e; --on-accent: #fffdf8; --muted: #706c64; --line: #d7d1c7; --surface: #fffdf8;
+      --message-radius: 41px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 140ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out; }
+    button:not(:disabled):active { transform: scale(.96); filter: brightness(.94); box-shadow: inset 0 2px 4px #24221e20; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    [hidden] { display: none !important; }
+    .shell { height: 100dvh; display: grid; grid-template-columns: 220px 280px minmax(0, 1fr); background: #f3f0e9; }
+    .sidebar { width: 220px; padding: 32px 16px; flex-shrink: 0; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .brand { margin: 0 12px 40px; font-size: 26px; font-weight: 700; letter-spacing: -.7px; }
+    .nav { display: grid; gap: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 14px 12px; border-radius: 6px; font-size: 18px; color: #aaa7a0; }
+    .nav-item.active { color: #24221e; background: #f3f0e9; font-weight: 600; }
+    .main { min-width: 0; min-height: 0; flex: 1; padding: 28px 40px 24px; display: flex; flex-direction: column; overflow-y: auto; }
+    @keyframes conversation-enter { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reply-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .route-sidebar { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 32px 24px; overflow-y: auto; color: #f3f0e9; background: #151515; border-right: 1px solid #393938; }
+    .route-header { display: flex; align-items: center; gap: 12px; }
+    .route-header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+    .route-owner { margin: 8px 0 0 36px; color: #aaa7a0; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+    .route-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 0; text-align: center; color: #aaa7a0; animation: conversation-enter 240ms ease-out; }
+    .route-empty > svg { width: 32px; height: 32px; }
+    .route-empty p { margin: 0; font-size: 18px; line-height: 1.6; word-break: keep-all; }
+    .route-active { margin-top: 32px; animation: conversation-enter 240ms ease-out; }
+    .route-source { margin: 0 0 28px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-timeline { margin: 0; padding: 0; list-style: none; }
+    .route-point { position: relative; padding: 0 0 36px 32px; }
+    .route-point::before { position: absolute; z-index: 1; left: 3px; top: 6px; width: 10px; height: 10px; border: 2px solid #aaa7a0; border-radius: 50%; background: #151515; content: ""; }
+    .route-point:not(:last-child)::after { position: absolute; left: 8px; top: 16px; bottom: -6px; width: 1px; background: #393938; content: ""; }
+    .route-point:first-child::before { border-color: #f3f0e9; background: #f3f0e9; box-shadow: 0 0 0 4px #393938; }
+    .route-point:last-child { padding-bottom: 0; }
+    .route-point:last-child::before { top: 0; width: 24px; height: 24px; border: 0; border-radius: 0; background: #f3f0e9; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .route-point-label { margin: 0 0 8px; color: #aaa7a0; font-size: 16px; line-height: 1.4; }
+    .route-point-name { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+    h1 { margin: 0 0 24px; font-size: 28px; font-weight: 600; }
+
+    /* ---- 이 화면 전용 (공통 색상·곡률·간격만 사용) ----
+       design-guide "여행 기록": 같은 제목·본문 크기와 간격, 날짜·설명은 보조 글자색, 목록은 얇은 구분선. */
+    .trip { width: min(100%, 1040px); margin: 0 auto; padding: 24px 0; display: grid; gap: 24px; }
+    .trip-head { display: grid; gap: 8px; }
+    .trip-head h1 { margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+    .trip-meta { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+    .trip-progress { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--accent); font-size: 18px; line-height: 1.4; }
+    .trip-progress svg { width: 20px; height: 20px; }
+    .card { padding: 32px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 32px; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+    .stat { min-width: 0; display: grid; gap: 4px; padding: 0 20px; }
+    .stat:first-child { padding-left: 0; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat dt { color: var(--muted); font-size: 16px; line-height: 1.4; white-space: nowrap; }
+    .stat dd { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .section { display: grid; gap: 4px; padding-top: 24px; border-top: 1px solid var(--line); }
+    .section h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; line-height: 1.5; }
+    .section-note { margin: 0 0 8px; color: var(--muted); font-size: 16px; line-height: 1.4; word-break: keep-all; }
+    .entries { margin: 0; padding: 0; list-style: none; }
+    .entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 16px; padding: 16px 0; }
+    .entry + .entry { border-top: 1px solid var(--line); }
+    .entry-main { min-width: 0; display: grid; gap: 4px; }
+    .entry-title { margin: 0; font-size: 18px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+    .entry-detail { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; overflow-wrap: anywhere; }
+    .entry-time { color: var(--muted); font-size: 16px; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .entry.is-achievement { grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; }
+    .check { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: var(--on-accent); background: var(--accent); }
+    .check svg { width: 20px; height: 20px; }
+    .empty { margin: 0; padding: 16px 0; color: var(--muted); font-size: 18px; line-height: 1.5; }
+    .save { display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: center; gap: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
+    .qr { width: 128px; height: 128px; display: grid; place-items: center; align-content: center; gap: 8px; border: 1px dashed var(--muted); border-radius: 8px; color: var(--muted); }
+    .qr svg { width: 40px; height: 40px; }
+    .qr span { font-size: 16px; font-weight: 600; }
+    .save-text { min-width: 0; display: grid; gap: 6px; }
+    .save-title { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.5; }
+    .save-note { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
+
+    /* ---- route-recommendation.html 에서 복사한 반응형 규칙 ---- */
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 80px 220px minmax(0, 1fr); }
+      .sidebar { width: 80px; padding: 28px 12px; }
+      .brand { margin: 0 0 36px; text-align: center; font-size: 22px; }
+      .brand-full, .nav-item span { display: none; }
+      .nav-item { justify-content: center; padding: 14px 0; }
+      .main { padding: 24px; }
+      .route-sidebar { padding: 28px 20px; }
+    }
+    @media (min-width: 1101px) { .brand-short { display: none; } }
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 80px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .sidebar { grid-column: 1; grid-row: 1 / -1; }
+      .main { grid-column: 2; grid-row: 1; }
+      .route-sidebar { grid-column: 2; grid-row: 2; max-height: 32dvh; padding: 20px 24px; border-right: 0; border-top: 1px solid #393938; }
+      .route-empty { flex-direction: row; justify-content: flex-start; padding: 16px 0 0; text-align: left; }
+      .route-active { margin-top: 20px; }
+      .route-source { margin-bottom: 20px; }
+    }
+    @media (max-width: 1100px) {
+      .card { padding: 24px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; }
+      .stat { padding: 0 16px; }
+      .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
+    }
+    @media (max-width: 600px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .main, .route-sidebar { grid-column: 1; }
+      .sidebar { display: none; }
+      .main { padding: 20px 16px; }
+      .card { padding: 20px; }
+      .entry { grid-template-columns: minmax(0, 1fr); }
+      .entry.is-achievement { grid-template-columns: 32px minmax(0, 1fr); }
+      .entry.is-achievement .entry-time { grid-column: 2; }
+      .save { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button { transition: none; }
+      .route-empty, .route-active { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></symbol>
+      <symbol id="i-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h9a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h9"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.8 7.5M3 4v7h7m2-4v6l4 2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+    </defs>
+  </svg>
+  <div class="shell">
+    <!-- 사이드 메뉴: route-recommendation.html 과 같은 항목. 이 화면은 "여행 기록" 아래 화면이다. -->
+    <aside class="sidebar" aria-label="주요 메뉴">
+      <div class="brand"><span class="brand-full">CoDrive</span><span class="brand-short">Co</span></div>
+      <nav class="nav" aria-label="화면 구성 미리보기">
+        <div class="nav-item" aria-label="여행 시작, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-home"/></svg><span>여행 시작</span></div>
+        <div class="nav-item" aria-label="우리 그룹, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-group"/></svg><span>우리 그룹</span></div>
+        <div class="nav-item" aria-label="실시간 주행, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-pin"/></svg><span>실시간 주행</span></div>
+        <div class="nav-item" aria-label="AI 경로 추천"><svg aria-hidden="true"><use href="#i-route"/></svg><span>AI 경로 추천</span></div>
+        <div class="nav-item" aria-label="음성 채널, 준비 중" aria-disabled="true"><svg aria-hidden="true"><use href="#i-mic"/></svg><span>음성 채널</span></div>
+        <div class="nav-item active" aria-label="여행 기록" aria-current="page"><svg aria-hidden="true"><use href="#i-history"/></svg><span>여행 기록</span></div>
+      </nav>
+    </aside>
+    <aside class="route-sidebar" aria-labelledby="route-heading">
+      <header class="route-header"><svg aria-hidden="true"><use href="#i-route"/></svg><h2 id="route-heading">현재 경로</h2></header>
+      <p class="route-owner" id="route-owner" hidden></p>
+      <div class="route-empty" id="route-empty"><svg aria-hidden="true"><use href="#i-pin"/></svg><p>안내 중인 경로가 없어요</p></div>
+      <div class="route-active" id="route-active" hidden>
+        <p class="route-source" id="route-source"></p>
+        <ol class="route-timeline" id="route-timeline" aria-label="현재 위치부터 목적지까지"></ol>
+      </div>
+    </aside>
+    <main class="main" id="main" data-trip-state="loading">
+      <article class="trip" aria-labelledby="trip-name">
+        <header class="trip-head">
+          <h1 id="trip-name"></h1>
+          <p class="trip-meta" id="trip-meta"></p>
+          <p class="trip-progress" id="trip-progress" role="status" hidden><svg aria-hidden="true"><use href="#i-history"/></svg><span>여행이 끝나면 기록이 완성돼요</span></p>
+        </header>
+        <div class="card">
+          <dl class="stats" aria-label="여행 요약">
+            <div class="stat"><dt>함께한 시간</dt><dd id="stat-time"></dd></div>
+            <div class="stat"><dt>방문 장소</dt><dd id="stat-visits"></dd></div>
+            <div class="stat"><dt>함께 내린 결정</dt><dd id="stat-decisions"></dd></div>
+            <div class="stat"><dt>달성한 도전과제</dt><dd id="stat-achievements"></dd></div>
+          </dl>
+          <section class="section" aria-labelledby="visits-heading">
+            <h2 id="visits-heading">방문 장소</h2>
+            <ol class="entries" id="visits" aria-label="방문 장소, 시간순"></ol>
+          </section>
+          <section class="section" aria-labelledby="decisions-heading">
+            <h2 id="decisions-heading">함께 내린 결정</h2>
+            <p class="section-note" id="decisions-summary"></p>
+            <ol class="entries" id="decisions" aria-label="함께 내린 결정, 시간순"></ol>
+          </section>
+          <section class="section" aria-labelledby="achievements-heading">
+            <h2 id="achievements-heading">달성한 도전과제</h2>
+            <ul class="entries" id="achievements"></ul>
+          </section>
+          <section class="save" id="save" aria-labelledby="save-title" hidden>
+            <div class="qr" role="img" aria-label="QR 코드 자리, 시연용"><svg aria-hidden="true"><use href="#i-qr"/></svg><span>시연용</span></div>
+            <div class="save-text">
+              <p class="save-title" id="save-title">휴대폰에 저장하기</p>
+              <p class="save-note">이 자리에 QR 코드가 들어가요. 지금은 시연 화면이라 실제로 저장되지 않아요.</p>
+            </div>
+          </section>
+        </div>
+      </article>
+    </main>
+  </div>
+  <template id="entry-template">
+    <li class="entry"><div class="entry-main"><p class="entry-title"></p><p class="entry-detail"></p></div><span class="entry-time"></span></li>
+  </template>
+  <script src="js/measurement.js"></script>
+  <script src="js/mock-scenario.js"></script>
+  <script src="js/navi.js"></script>
+  <script src="js/fun-shell.js"></script>
+  <script src="js/trip-log.js"></script>
+  <script src="js/dev-panel.js"></script> <!-- ?dev=1 일 때만 시연 패널 표시 -->
+  <script>
+    (() => {
+      'use strict';
+      // 카드 내용은 trip-log.js 에서만 읽는다. (왼쪽 현재 경로 패널은 공통 골격 fun-shell.js 가 navi.js 로 그린다.)
+      const { CoDriveTripLog: tripLog } = window;
+      const { duration } = window.CoDriveFunShell;
+      const $ = id => document.getElementById(id);
+      const KIND = { VOTE: '투표', ROULETTE: '룰렛', LADDER: '사다리타기' };
+
+      // ---- 문구 ----
+      const time = ms => new Date(ms).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+      const date = ms => {
+        const day = new Date(ms);
+        return `${day.getFullYear()}년 ${day.getMonth() + 1}월 ${day.getDate()}일 (${'일월화수목금토'[day.getDay()]})`;
+      };
+      // 투표 가결 여부: 찬성이 과반이면 가결 (임시 기준 — fun-pending-decisions.md 참고)
+      const hasTally = decision => Number.isInteger(decision.votes?.agree) && Number.isInteger(decision.votes?.total) && decision.votes.total > 0;
+      const passed = decision => decision.votes.agree * 2 > decision.votes.total;
+
+      function entry({ title, detail, timeText, className }) {
+        const item = $('entry-template').content.firstElementChild.cloneNode(true);
+        if (className) item.classList.add(className);
+        item.querySelector('.entry-title').textContent = title;
+        const detailNode = item.querySelector('.entry-detail');
+        if (detail) detailNode.textContent = detail; else detailNode.remove();
+        item.querySelector('.entry-time').textContent = timeText;
+        return item;
+      }
+      function fill(list, items, emptyText) {
+        if (items.length) { list.replaceChildren(...items); return; }
+        const empty = document.createElement('li');
+        empty.className = 'empty';
+        empty.textContent = emptyText;
+        list.replaceChildren(empty);
+      }
+
+      function render(record) {
+        const done = record.endedAt != null;
+        $('main').dataset.tripState = done ? 'complete' : 'in-progress';
+        $('trip-name').textContent = record.groupName || '이번 여행';
+        $('trip-meta').textContent = date(record.startedAt) + ' · ' + time(record.startedAt) + ' 출발' + (done ? ' · ' + time(record.endedAt) + ' 도착' : '');
+        $('trip-progress').hidden = done;
+        $('save').hidden = !done;
+
+        const votes = record.decisions.filter(decision => decision.kind === 'VOTE');
+        const tallied = votes.filter(hasTally);
+        const passCount = tallied.filter(passed).length;
+        const count = kind => record.decisions.filter(decision => decision.kind === kind).length;
+        $('stat-time').textContent = duration(record.togetherSeconds);
+        $('stat-visits').textContent = record.visits.length + '곳';
+        $('stat-decisions').textContent = record.decisions.length + '건';
+        $('stat-achievements').textContent = record.achievements.length + '개';
+
+        fill($('visits'), record.visits.map(visit => entry({
+          title: visit.placeName,
+          timeText: time(visit.arrivedAt) + (visit.leftAt ? ' – ' + time(visit.leftAt) : '')
+        })), done ? '방문한 장소가 없어요' : '방문한 장소가 아직 없어요');
+
+        $('decisions-summary').textContent = record.decisions.length
+          ? `투표 ${votes.length}건 (가결 ${passCount} · 부결 ${tallied.length - passCount}${tallied.length < votes.length ? ' · 집계 없음 ' + (votes.length - tallied.length) : ''}) · 룰렛 ${count('ROULETTE')}건 · 사다리타기 ${count('LADDER')}건`
+          : '';
+        $('decisions-summary').hidden = !record.decisions.length;
+        fill($('decisions'), record.decisions.map(decision => {
+          let detail = KIND[decision.kind] + ' · ';
+          if (decision.kind === 'VOTE') {
+            detail += hasTally(decision) ? `찬성 ${decision.votes.agree}/${decision.votes.total} · ${passed(decision) ? '가결' : '부결'}` : '집계 없음';
+          } else detail += '결과 ' + decision.result;
+          const title = decision.kind === 'VOTE' ? decision.title + ': ' + decision.result : decision.title;
+          return entry({ title, detail, timeText: time(decision.decidedAt) });
+        }), done ? '함께 내린 결정이 없어요' : '아직 함께 내린 결정이 없어요');
+
+        fill($('achievements'), record.achievements.map(achievement => {
+          const item = entry({ title: achievement.title, timeText: time(achievement.achievedAt), className: 'is-achievement' });
+          const check = document.createElement('span');
+          check.className = 'check';
+          check.setAttribute('aria-hidden', 'true');
+          check.innerHTML = '<svg><use href="#i-check"/></svg>';
+          item.prepend(check);
+          return item;
+        }), done ? '달성한 도전과제가 없어요' : '아직 달성한 도전과제가 없어요');
+      }
+
+
+      // 진행 중에는 함께한 시간이 늘어나므로 1분마다 다시 그린다. 종료 후에는 바뀌지 않는다.
+      let seq = 0;
+      async function refresh() {
+        const id = ++seq;
+        const record = await tripLog.getTripRecord();
+        if (id === seq) render(record);
+      }
+      tripLog.subscribe(refresh);
+      window.setInterval(() => { if ($('main').dataset.tripState === 'in-progress') refresh(); }, 60000);
+      Promise.all([refresh(), window.CoDriveFunShell.mountRoutePanel()]).then(() => { document.documentElement.dataset.ready = 'true'; });
+    })();
+  </script>
+</body>
+</html>
