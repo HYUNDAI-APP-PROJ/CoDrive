@@ -98,7 +98,7 @@ public final class DrivingStatusScreen {
         int cardGaps=Math.max(0,vehicleCount-1)*8;
         int cardHeight=compact?vehicleCount*(briefHeader?64:88)+cardGaps:briefHeader?220:260;
         int panelHeight=Math.max(0,usableHeight-topbar-cardHeight-64-(hasNotice?alert:0)-panelGap-actionsGap-sectionGap
-                -compactRouteHeight);
+                -compactRouteHeight-(briefHeader?0:48));
         shortWindow=compact||cardHeight<330;
         height(R.id.convoy_topbar,topbar);
         height(R.id.convoy_header,briefHeader?44:compact?76:96);
