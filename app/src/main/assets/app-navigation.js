@@ -28,7 +28,25 @@
   window.CoDriveSavePage = () => {
     window.dispatchEvent(new Event('codrive-pause'));
     save();
+    publishRoutePreview();
   };
+  function publishRoutePreview() {
+    // Share the route actually shown by this page without depending on its mock/data model.
+    const active = document.getElementById('route-active');
+    const timeline = document.getElementById('route-timeline');
+    if (!active || !timeline || typeof host.saveRoutePreview !== 'function') return;
+    const loading = document.getElementById('route-loading');
+    const steps = Array.from(timeline.children, point => ({
+      label: point.querySelector('.route-point-label')?.textContent.trim() || '',
+      name: point.querySelector('.route-point-name')?.textContent.trim() || ''
+    }));
+    const status = loading && !loading.hidden ? 'loading' : !active.hidden && steps.length ? 'active' : 'empty';
+    host.saveRoutePreview(JSON.stringify({ status,
+      owner: document.getElementById('route-owner')?.textContent.trim() || '',
+      source: document.getElementById('route-source')?.textContent.trim() || '',
+      steps: status === 'active' ? steps : []
+    }));
+  }
   window.CoDriveViewport = () => {
     const viewport = JSON.parse(host.viewport());
     document.querySelector('meta[name="viewport"]').content =
@@ -89,6 +107,13 @@
       toggle.setAttribute('aria-expanded', String(open));
     });
     document.body.append(toggle);
+    const routePanel = document.querySelector('.route-sidebar');
+    if (routePanel) {
+      new MutationObserver(publishRoutePreview).observe(routePanel, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['hidden']
+      });
+      publishRoutePreview();
+    }
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         document.querySelector('.sidebar').classList.remove('navigation-open');

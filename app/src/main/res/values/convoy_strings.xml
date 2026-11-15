@@ -26,4 +26,10 @@
     <string name="convoy_distance_waiting">거리 정보를 기다리는 중</string>
     <string name="convoy_destination_zero">목적지 · 0km</string>
     <string name="convoy_remaining_distance">남은 거리</string>
+    <string name="convoy_current_route">현재 경로</string>
+    <string name="convoy_route_empty">안내 중인 경로가 없어요</string>
+    <string name="convoy_route_loading">내비게이션에 반영 중이에요</string>
+    <string name="convoy_route_open">현재 경로 보기</string>
+    <string name="convoy_route_compact_empty">현재 경로 · 안내 없음</string>
+    <string name="convoy_route_compact_loading">현재 경로 · 반영 중</string>
 </resources>

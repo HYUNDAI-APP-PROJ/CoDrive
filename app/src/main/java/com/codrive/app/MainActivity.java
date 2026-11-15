@@ -161,6 +161,9 @@ public final class MainActivity extends AppCompatActivity {
         }
     }
     private final class NativeBridge {
+        @JavascriptInterface public void saveRoutePreview(String json) {
+            RoutePanelStore.save(MainActivity.this,json);
+        }
         @JavascriptInterface public String menu() { return AppNavigation.menu(MainActivity.this); }
         @JavascriptInterface public void navigate(String screen) {
             runOnUiThread(() -> {

@@ -8,6 +8,7 @@ import android.view.Gravity;
 import android.view.View;
 import com.google.android.material.button.MaterialButton;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.content.res.AppCompatResources;
@@ -25,6 +26,7 @@ public final class DrivingStatusScreen {
     private final DrivingStatusViewModel model;
     private final List<VehicleStatusCard> cards=new ArrayList<>();
     private DrivingStatusUiState state;
+    private RoutePanelState routeState=RoutePanelState.empty();
     private boolean compact, shortWindow, briefHeader;
     private int lastWidth=-1,lastHeight=-1,lastVehicleCount=-1;
     private boolean lastHasNotice;
@@ -44,6 +46,11 @@ public final class DrivingStatusScreen {
             demo.setContentDescription(context.getString(R.string.convoy_demo_settings));
             demo.setOnClickListener(v->showScenarios());
         }
+        View routeButton=root.findViewById(R.id.convoy_route_compact);
+        routeButton.setBackground(new RippleDrawable(ColorStateList.valueOf(context.getColor(R.color.convoy_hover)),
+                VehicleStatusCard.shape(context,context.getColor(R.color.convoy_surface),context.getColor(R.color.convoy_line),6),null));
+        routeButton.setOnClickListener(v->showCurrentRoute());
+        bindRoute(routeState);
     }
     private int dp(float n) { return Math.round(n*context.getResources().getDisplayMetrics().density); }
     private void height(int id,int value) { View v=root.findViewById(id); v.getLayoutParams().height=dp(value); v.requestLayout(); }
@@ -60,17 +67,25 @@ public final class DrivingStatusScreen {
         float density=context.getResources().getDisplayMetrics().density;
         float windowDp=windowWidth/density;
         int railWidth=windowDp<=600?0:windowDp<=1100?80:220;
+        int routeWidth=windowDp>1100?280:windowDp>760?220:0;
+        int compactRouteHeight=routeWidth==0?60:0;
         int horizontal=windowDp<=600?16:windowDp<=1100?24:40;
         boolean lowWindow=windowHeight/density<700;
         int top=lowWindow?12:windowDp<=600?20:windowDp<=1100?24:28;
         int bottom=lowWindow?12:windowDp<=600?20:24;
-        int availableWidth=Math.min(dp(1040),windowWidth-dp(railWidth+horizontal*2));
+        int availableWidth=Math.min(dp(1040),windowWidth-dp(railWidth+routeWidth+horizontal*2));
         int availableHeight=windowHeight-dp(top+bottom);
         View sidebar=root.findViewById(R.id.convoy_sidebar);
         sidebar.setVisibility(railWidth==0?View.GONE:View.VISIBLE);
         sidebar.getLayoutParams().width=dp(railWidth); sidebar.requestLayout();
         int railInset=dp(railWidth==220?16:8);
         root.findViewById(R.id.convoy_sidebar_content).setPadding(railInset,dp(28),railInset,dp(24));
+        View routePanel=root.findViewById(R.id.convoy_route_sidebar);
+        routePanel.setVisibility(routeWidth==0?View.GONE:View.VISIBLE);
+        routePanel.getLayoutParams().width=dp(routeWidth);
+        int routeInset=dp(routeWidth==280?24:20);
+        routePanel.setPadding(routeInset,dp(routeWidth==280?32:28),routeInset,dp(24)); routePanel.requestLayout();
+        root.findViewById(R.id.convoy_route_compact).setVisibility(routeWidth==0?View.VISIBLE:View.GONE);
         root.findViewById(R.id.convoy_main_host).setPadding(dp(horizontal),dp(top),dp(horizontal),dp(bottom));
         View content=root.findViewById(R.id.convoy_content);
         content.getLayoutParams().width=availableWidth; content.requestLayout();
@@ -82,7 +97,8 @@ public final class DrivingStatusScreen {
         int sectionGap=briefHeader?12:68;
         int cardGaps=Math.max(0,vehicleCount-1)*8;
         int cardHeight=compact?vehicleCount*(briefHeader?64:88)+cardGaps:briefHeader?220:260;
-        int panelHeight=Math.max(0,usableHeight-topbar-cardHeight-64-(hasNotice?alert:0)-panelGap-actionsGap-sectionGap);
+        int panelHeight=Math.max(0,usableHeight-topbar-cardHeight-64-(hasNotice?alert:0)-panelGap-actionsGap-sectionGap
+                -compactRouteHeight);
         shortWindow=compact||cardHeight<330;
         height(R.id.convoy_topbar,topbar);
         height(R.id.convoy_header,briefHeader?44:compact?76:96);
@@ -120,6 +136,20 @@ public final class DrivingStatusScreen {
         }
     }
     private void text(int id,String value) { ((TextView)root.findViewById(id)).setText(value); }
+    public void bindRoute(RoutePanelState route) {
+        routeState=route;
+        ((CurrentRoutePanel)root.findViewById(R.id.convoy_route_sidebar)).bind(route);
+        int label=route.status==RoutePanelState.Status.ACTIVE?R.string.convoy_route_open:
+                route.status==RoutePanelState.Status.LOADING?R.string.convoy_route_compact_loading:R.string.convoy_route_compact_empty;
+        text(R.id.convoy_route_compact,context.getString(label));
+    }
+    private void showCurrentRoute() {
+        if(state==null || !state.trip.detailsAllowed) return;
+        CurrentRoutePanel panel=new CurrentRoutePanel(context); panel.bind(routeState);
+        FrameLayout viewport=new FrameLayout(context);
+        viewport.addView(panel,new FrameLayout.LayoutParams(-1,Math.min(dp(480),Math.max(dp(200),root.getHeight()*2/3))));
+        showDialog(new AlertDialog.Builder(context).setView(viewport).setPositiveButton(R.string.convoy_done,null));
+    }
     public void bind(DrivingStatusUiState state) {
         this.state=state;
         resize(root.getWidth(),root.getHeight());
@@ -148,6 +178,7 @@ public final class DrivingStatusScreen {
         text(R.id.convoy_alert,notice);
         root.findViewById(R.id.convoy_alert).setVisibility(notice.isEmpty()?View.GONE:View.VISIBLE);
         root.findViewById(R.id.convoy_demo).setEnabled(BuildConfig.DEBUG && state.trip.detailsAllowed);
+        root.findViewById(R.id.convoy_route_compact).setEnabled(state.trip.detailsAllowed);
         VehicleRequest request=state.trip.mine().request;
         requestButton(R.id.convoy_rest,VehicleRequest.Type.REST,request);
         requestButton(R.id.convoy_energy,state.energyRequest(),request);

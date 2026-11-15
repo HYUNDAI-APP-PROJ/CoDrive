@@ -7,6 +7,8 @@
         <LinearLayout android:id="@+id/convoy_sidebar_content" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:paddingHorizontal="16dp" android:paddingVertical="28dp" android:orientation="vertical" />
     </ScrollView>
+    <com.codrive.convoy.ui.CurrentRoutePanel android:id="@+id/convoy_route_sidebar"
+        android:layout_width="280dp" android:layout_height="match_parent" />
     <FrameLayout android:id="@+id/convoy_main_host" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent"
         android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="28dp" android:paddingBottom="24dp">
         <LinearLayout android:id="@+id/convoy_content" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -22,6 +24,12 @@
                     android:layout_height="64dp" android:gravity="center" android:paddingHorizontal="20dp" android:textSize="18sp"
                     android:stateListAnimator="@animator/convoy_button_press" />
             </LinearLayout>
+            <TextView android:id="@+id/convoy_route_compact" style="@style/ConvoyText"
+                android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="12dp"
+                android:gravity="center_vertical" android:paddingHorizontal="16dp" android:textSize="16sp"
+                android:text="@string/convoy_route_open" android:maxLines="1" android:ellipsize="end"
+                android:drawableStart="@drawable/ic_route" android:drawableTint="@color/convoy_ink" android:drawablePadding="12dp"
+                android:visibility="gone" android:clickable="true" android:focusable="true" />
             <LinearLayout android:id="@+id/convoy_destination_panel" android:layout_width="match_parent" android:layout_height="300dp"
                 android:layout_marginTop="24dp" android:padding="24dp" android:orientation="vertical" android:background="@drawable/convoy_destination_panel">
                 <LinearLayout android:id="@+id/convoy_header" android:layout_width="match_parent" android:layout_height="76dp" android:gravity="center_vertical" android:baselineAligned="false">
